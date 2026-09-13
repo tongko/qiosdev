@@ -1,0 +1,77 @@
+# ========== Build output / Compiled artifacts ==========
+*.o
+*.obj
+*.elf
+*.efi
+*.bin
+*.iso
+*.img
+*.qcow2
+*.gdb
+*.map
+*.lst
+*.dis
+*.hex
+*.out
+
+# Linker intermediate files
+*.ld.out
+*.so
+*.a
+*.lib
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+
+# Make build generated
+*.d
+*.dep
+build/
+_build/
+out/
+obj/
+bin/
+
+# ========== Editor / IDE ==========
+## VSCode
+.vscode/
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/c_cpp_properties.json
+*.swp
+*.swo
+*~
+
+## CLion
+cmake-build-*/
+.idea/
+
+## vim
+*.swp
+*.swo
+
+# ========== OS generated junk ==========
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+
+# WSL / Linux
+*.log
+*.tmp
+temp/
+tmp/
+
+# ========== Debug / GDB / QEMU runtime ==========
+*.core
+core.*
+gdb.txt
+qemu_log.txt
+
+# ========== Git itself ==========
+.git/
