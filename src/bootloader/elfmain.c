@@ -8,6 +8,9 @@
 #include <efi.h>
 #include <efilib.h>
 
+#define COLOR_ARGB(a, r, g, b)                                                 \
+	(((UINT32)(a) << 24) | ((UINT32)(r) << 16) | ((UINT32)(g) << 8) | (UINT32)(b))
+
 #define IA32_EFER_MSR 0xC0000080
 #define IA32_EFER_NXE (1ULL << 11)
 #define READ_EFER_MSR(high, low)                                               \
@@ -28,6 +31,7 @@ static void ensure_nxe_enabled(void) {
 	if (efer & IA32_EFER_NXE) {
 		Print(u"[ensure_nxe_enabled] IA32_EFER.NXE is ALREADY enabled by UEFI "
 					u"firmware.\n");
+		_nxe_enabled = true;
 	} else {
 		Print(u"[ensure_nxe_enabled] IA32_EFER.NXE is DISABLED. Turning it on "
 					u"now... ");
@@ -117,11 +121,54 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 
 	EFI_VIRTUAL_ADDRESS kbuf = 0;
 	status = load_elf(hfile, &kbuf);
+	hfile->Close(hfile);
 	if (EFI_ERROR(status)) {
-		hfile->Close(hfile);
 		Print(u"%E❌ [efi_main] Failed to load kernel: %r%N\r\n", status);
 		return status;
 	}
+
+	// ================================================================
+	// 3. Setup boot info struct, including framebuffer and memory map.
+	// ================================================================
+	status = bootinfo_init(&bi);
+	if (EFI_ERROR(status)) {
+		Print(u"%E❌ [efi_main] Failed to init boot info: %r%N\r\n", status);
+		return status;
+	}
+
+	Print(u"[DEBUG] FB paddr: 0x%lx\r\n", bi.frame_buff.base_addr);
+
+	Print(u"[efi_main] Exiting boot service... ");
+	do {
+		EFI_MEMORY_DESCRIPTOR *map;
+		UINTN msz, dsz, key;
+		BS->FreePool(bi.mem_map.map);
+		status = get_memmap(&map, &msz, &dsz, &key);
+		if (EFI_ERROR(status)) {
+			Print(u"❌");
+			return status;
+		}
+		Print(u" .");
+		bi.mem_map.map = map;
+		bi.mem_map.map_size = msz;
+		bi.mem_map.desc_size = dsz;
+		status = BS->ExitBootServices(_himage, key);
+		if (status != EFI_SUCCESS && status != EFI_INVALID_PARAMETER) {
+			Print(u"%E❌ [efi_main] ExitBootServices failed: %r%N\r\n", status);
+			return status;
+		}
+	} while (status == EFI_INVALID_PARAMETER);
+
+	UINT32 color = COLOR_ARGB(0, 40, 50, 60);
+	for (UINTN y = 100; y < 200; y++) {
+		for (UINTN x = 100; x < 200; x++) {
+			bi.frame_buff.base_addr[(y * bi.frame_buff.px_per_scanline) + x] = color;
+		}
+	}
+
+	SET_CR3(bi.pml4_paddr);
+	kernel_entry_fn_t kernel_fn = (kernel_entry_fn_t)kbuf;
+	kernel_fn(&bi);
 
 	Print(u"Shouhdn't reach here...");
 	while (true) {

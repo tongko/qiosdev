@@ -29,3 +29,5 @@ typedef struct {
 	EFI_PHYSICAL_ADDRESS pml4_paddr;
 	EFI_PHYSICAL_ADDRESS kernel_phys_start;
 } bootinfo_t;
+
+EFI_STATUS bootinfo_init(bootinfo_t *bi);

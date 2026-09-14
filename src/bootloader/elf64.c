@@ -16,9 +16,15 @@ static UINT64 elfflags_to_paging_attr(UINT32 p_flags) {
 		paging_attributes |= PAGE_WRITE;
 	}
 
+	Print(u"[DEBUG] _nxe_enabled is: %s\r\n",
+				(_nxe_enabled && (p_flags & PF_X)) ? u"true" : u"false");
 	// 2. Handle Executable Permission (Invert for x86_64 NX)
-	if (_nxe_enabled && !(p_flags & PF_X)) {
-		paging_attributes |= PAGE_NX;
+	if (_nxe_enabled) {
+		if (!(p_flags & PF_X)) {
+			paging_attributes |= PAGE_NX;
+		} else {
+			paging_attributes &= ~PAGE_NX;
+		}
 	}
 
 	// Leave PAGE_USER unset. After transitions to user space later,
@@ -207,6 +213,7 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 		// Map the kernel into page table.
 		EFI_VIRTUAL_ADDRESS vaddr = hdr->p_vaddr;
 		UINT64 attr = elfflags_to_paging_attr(hdr->p_flags);
+		Print(u"\r\n[DEBUG] attribute is %lx\r\n", attr);
 		status = map_virt_addr(vaddr, seg_dest, attr, hdr->p_memsz, PAGE_4K);
 		if (EFI_ERROR(status)) {
 			FreePool(phdrs);
