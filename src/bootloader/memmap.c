@@ -1,11 +1,13 @@
+#include <efiglobal.h>
 #include <memmap.h>
 #include <bootinfo.h>
 #include <efilib.h>
 
-#define IS_RAM_TYPE(x) ((x > 0 && x < 7) || (x > 8 && x < 10) || x == 14)
+#define IS_RAM_TYPE(x) ((x > 0 && x <= 7) || (x > 8 && x < 10) || x == 14)
 
 #if defined(EFI_DEBUG) && defined(EFI_DEBUG_MEM)
 static CHAR16 _temp_buff[100] = {0};
+static bootinfo_t *_bi;
 
 /*****************************************************************************
  * function: get_type_str
@@ -98,6 +100,8 @@ EFI_STATUS mem_init(bootinfo_t *bi) {
 		Print(u"%E❌ [mem_init] Invalid parameter 'bi'.%N\r\n");
 		return EFI_INVALID_PARAMETER;
 	}
+
+	_bi = bi;
 
 	// Let's first get memory map for further tasks.
 	EFI_MEMORY_DESCRIPTOR *map;
@@ -252,7 +256,17 @@ EFI_PHYSICAL_ADDRESS alloc_pages(EFI_ALLOCATE_TYPE type_alloc,
 		return 0;
 	}
 
+	// Mark it so do not reclaim later.
+	_bi->alloc_pages[_curr_idx++] = paddr;
 	BS->SetMem((VOID *)paddr, num_pg * EFI_PAGE_SIZE, 0);
 
 	return paddr;
+}
+
+void free_pages(EFI_PHYSICAL_ADDRESS paddr, UINTN numpg) {
+	if (!paddr || !numpg) {
+		return;
+	}
+
+	BS->FreePages(paddr, numpg);
 }

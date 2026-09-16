@@ -135,6 +135,10 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 		Print(u"%E❌ [efi_main] Failed to init boot info: %r%N\r\n", status);
 		return status;
 	}
+	EFI_PHYSICAL_ADDRESS stack_pa =
+			alloc_pages(AllocateAnyPages, EfiLoaderData, STACK_PAGE_SIZE);
+	Print(u"[efi_main] Stack physical address: 0x%lx\r\n", stack_pa);
+	bi.kstack_base = stack_pa;
 
 	Print(u"[DEBUG] FB paddr: 0x%lx\r\n", bi.frame_buff.base_addr);
 
@@ -167,10 +171,19 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	}
 
 	SET_CR3(bi.pml4_paddr);
-	kernel_entry_fn_t kernel_fn = (kernel_entry_fn_t)kbuf;
-	kernel_fn(&bi);
 
-	Print(u"Shouhdn't reach here...");
+	EFI_VIRTUAL_ADDRESS stack_top =
+			HHDM(stack_pa) + (STACK_PAGE_SIZE * EFI_PAGE_SIZE);
+	(void)stack_top;
+	__asm__("mov %[stack], %%rsp\n" // rcx = arg1: stack_top
+					"mov %[boot], %%rdi\n"	// rdx = arg2: boot_info, becomes kernel SysV
+																	// 1st arg
+					"jmp *%[kernel]\n"			// r8 = arg3: kernel entry virtual address
+					:
+					: [stack] "r"(stack_top), [boot] "r"((void *)&bi), [kernel] "r"(kbuf)
+					: "memory");
+
+	// Print(u"Shouhdn't reach here...");
 	while (true) {
 		__asm__ volatile("hlt");
 	}

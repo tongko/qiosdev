@@ -175,7 +175,7 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 
 		UINTN pg_cnt = (hdr->p_memsz + EFI_PAGE_SIZE - 1) / EFI_PAGE_SIZE;
 		EFI_PHYSICAL_ADDRESS seg_dest =
-				alloc_pages(AllocateAnyPages, EfiRuntimeServicesData, pg_cnt);
+				alloc_pages(AllocateAnyPages, EfiLoaderCode, pg_cnt);
 		if (!seg_dest) {
 			FreePool(phdrs);
 			Print(u"[DEBUG] hdr->p_memsz: %lx\r\n", hdr->p_memsz);

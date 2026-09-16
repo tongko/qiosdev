@@ -17,8 +17,7 @@ EFI_STATUS paging_init(IN OUT bootinfo_t *bi) {
 	// Get actice PML4 address from CR3
 	UINT64 *pml4 = (UINT64 *)(READ_CR3 & ADDRESS_MASK);
 	// Allocate a page frame for the new PML4 table
-	_pml4_table =
-			(UINT64 *)alloc_pages(AllocateAnyPages, EfiRuntimeServicesData, 1);
+	_pml4_table = (UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
 	if (!_pml4_table) {
 		Print(u"%E❌ [paging_init] PML4 allocate page failed.\r\n");
 		return EFI_OUT_OF_RESOURCES;
@@ -97,7 +96,7 @@ EFI_STATUS map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr,
 
 		if (!(_pml4_table[pml4_idx] & PAGE_PRESENT)) {
 			UINT64 *new_pdpt =
-					(UINT64 *)alloc_pages(AllocateAnyPages, EfiRuntimeServicesData, 1);
+					(UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
 			if (!new_pdpt) {
 				Print(u"%E❌ [map_virt_addr] PDPT allocate page failed.\r\n");
 				return EFI_OUT_OF_RESOURCES;
@@ -109,7 +108,7 @@ EFI_STATUS map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr,
 
 		if (!(pdpt[pdpt_idx] & PAGE_PRESENT)) {
 			UINT64 *new_pd =
-					(UINT64 *)alloc_pages(AllocateAnyPages, EfiRuntimeServicesData, 1);
+					(UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
 			if (!new_pd) {
 				Print(u"%E❌ [map_virt_addr] PD allocate page failed.\r\n");
 				return EFI_OUT_OF_RESOURCES;
@@ -125,7 +124,7 @@ EFI_STATUS map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr,
 
 		if (!(pd[pd_idx] & PAGE_PRESENT)) {
 			UINT64 *new_pt =
-					(UINT64 *)alloc_pages(AllocateAnyPages, EfiRuntimeServicesData, 1);
+					(UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
 			if (!new_pt) {
 				Print(u"%E❌ [map_virt_addr] PT allocate page failed.\r\n");
 				return EFI_OUT_OF_RESOURCES;

@@ -75,3 +75,7 @@ qemu_log.txt
 
 # ========== Git itself ==========
 .git/
+
+# ========== Misc ================
+MY_VARS.fd
+gnu-efi/

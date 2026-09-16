@@ -28,6 +28,8 @@ typedef struct {
 	EFI_PHYSICAL_ADDRESS highest_phys_addr;
 	EFI_PHYSICAL_ADDRESS pml4_paddr;
 	EFI_PHYSICAL_ADDRESS kernel_phys_start;
+	EFI_PHYSICAL_ADDRESS kstack_base;
+	EFI_PHYSICAL_ADDRESS alloc_pages[20];
 } bootinfo_t;
 
 EFI_STATUS bootinfo_init(bootinfo_t *bi);

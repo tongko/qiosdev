@@ -13,6 +13,9 @@
 #define SET_CR3(pml) __asm__ volatile("mov %0, %%cr3" : : "r"(pml) : "memory");
 
 #define HHDM_OFFSET 0xFFFF800000000000ULL
+#define KERNEL_OFFSET 0xFFFFFFFF80000000ULL
+
+#define HHDM(a) (HHDM_OFFSET + a)
 
 #define ENTRY_MASK 0x1ff
 #define ADDRESS_MASK ~0xfffUL

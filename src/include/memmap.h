@@ -13,3 +13,5 @@ EFI_STATUS get_non_resv_mem(IN memmap_t *mem_map,
 
 EFI_PHYSICAL_ADDRESS alloc_pages(EFI_ALLOCATE_TYPE type_alloc,
 																 EFI_MEMORY_TYPE type_mem, UINTN num_pg);
+
+void free_pages(EFI_PHYSICAL_ADDRESS paddr, UINTN numpg);
