@@ -17,6 +17,11 @@ typedef struct {
 	UINTN desc_size;
 } memmap_t;
 
+typedef struct {
+	EFI_PHYSICAL_ADDRESS pstart;
+	EFI_PHYSICAL_ADDRESS pend;
+} allocated_t;
+
 // Boot info passed to kernel after ExitBootServices
 typedef struct {
 	UINT32 flags; // Bitmask of boot info flags
@@ -29,7 +34,9 @@ typedef struct {
 	EFI_PHYSICAL_ADDRESS pml4_paddr;
 	EFI_PHYSICAL_ADDRESS kernel_phys_start;
 	EFI_PHYSICAL_ADDRESS kstack_base;
-	EFI_PHYSICAL_ADDRESS alloc_pages[20];
+	allocated_t alloc_pages[20];
 } bootinfo_t;
 
 EFI_STATUS bootinfo_init(bootinfo_t *bi);
+
+void reorder_alloc(bootinfo_t *bi);

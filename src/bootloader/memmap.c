@@ -7,7 +7,7 @@
 
 #if defined(EFI_DEBUG) && defined(EFI_DEBUG_MEM)
 static CHAR16 _temp_buff[100] = {0};
-static bootinfo_t *_bi;
+bootinfo_t *_bi;
 
 /*****************************************************************************
  * function: get_type_str
@@ -257,7 +257,23 @@ EFI_PHYSICAL_ADDRESS alloc_pages(EFI_ALLOCATE_TYPE type_alloc,
 	}
 
 	// Mark it so do not reclaim later.
-	_bi->alloc_pages[_curr_idx++] = paddr;
+	// check if paddr fall next to any allocated.
+	UINTN i;
+	for (i = 0; i < 20; i++) {
+		allocated_t a = _bi->alloc_pages[i];
+		if (a.pend == paddr) {
+			a.pend =
+					paddr + (num_pg * EFI_PAGE_SIZE); // extend the allocated to new range
+			break;
+		}
+	}
+
+	if (i >= 20 && _curr_idx < 20) {
+		// if not found, create another
+		_bi->alloc_pages[_curr_idx].pstart = paddr;
+		_bi->alloc_pages[_curr_idx++].pend = paddr + (num_pg * EFI_PAGE_SIZE);
+	}
+
 	BS->SetMem((VOID *)paddr, num_pg * EFI_PAGE_SIZE, 0);
 
 	return paddr;

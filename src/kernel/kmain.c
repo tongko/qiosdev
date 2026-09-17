@@ -15,14 +15,14 @@ void kmain(bootinfo_t *bi) {
 	__asm__ volatile("cli");
 
 	// copy bootinfo so we can reclaim bootloader data later
-	memcpy(_bootinfo, bi, sizeof(bootinfo_t));
+	memcpy(&_bi, bi, sizeof(bootinfo_t));
 
 	// Get GDT working first
 	gdt_init();
 	idt_init();
 
 	// memory and page frame allocator
-	mem_init((mmap_t *)&bi->mem_map);
+	mem_init(&_bi);
 
 	uint32_t bg_color = COLOR_ARGB(0, 30, 40, 60);
 	paint_background(bi, bg_color);

@@ -35,7 +35,7 @@ all: $(OUTPUT)
 	@echo "======================"
 
 $(OUTPUT): $(OBJS) $(ASM_OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBK)
 
 $(BUILD_DIR)/kernel/%.asmo: $(SRC_DIR)/kernel/%.s | $(OBJS_DIR)
 	mkdir -p $(dir $@)

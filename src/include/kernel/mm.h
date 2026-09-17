@@ -1,6 +1,6 @@
 #pragma once
 
-#include <global.h>
+#include <kernel/global.h>
 #include <stdint.h>
 #include <stddef.h>
 

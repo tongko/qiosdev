@@ -1,8 +1,6 @@
 #include <kernel/idt.h>
+#include <kernel/global.h>
 #include <stdint.h>
-
-idt_entry_t _idt[256];
-idtptr_t _idt_ptr;
 
 void set_idt_gate(int32_t v, uint64_t isr_addr, uint8_t attrs) {
 	_idt[v].isr_low = (uint16_t)(isr_addr & 0xFFFF);

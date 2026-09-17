@@ -3,6 +3,8 @@
 #include <bootinfo.h>
 #include <efi.h>
 
+extern bootinfo_t *_bi;
+
 EFI_STATUS mem_init(bootinfo_t *bi);
 
 EFI_STATUS get_memmap(OUT EFI_MEMORY_DESCRIPTOR **out_map, OUT UINTN *map_sz,

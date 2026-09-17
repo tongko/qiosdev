@@ -2,6 +2,7 @@
 #include <efi.h>
 #include <efilib.h>
 
+bootinfo_t *_bi;
 static EFI_GUID _gop_guid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
 
 EFI_STATUS bootinfo_init(bootinfo_t *out_bi) {
@@ -74,4 +75,60 @@ EFI_STATUS bootinfo_init(bootinfo_t *out_bi) {
 	}
 
 	return EFI_SUCCESS;
+}
+
+static void bubble_sort(allocated_t arr[], int size) {
+	for (int i = 0; i < size - 1; i++) {
+		for (int j = 0; j < size - i - 1; j++) {
+			// Swap if the current element is bigger than the next
+			if (arr[j].pstart > arr[j + 1].pstart && arr[j + 1].pstart > 0) {
+				allocated_t temp = arr[j];
+				arr[j] = arr[j + 1];
+				arr[j + 1] = temp;
+			}
+		}
+	}
+}
+
+static void merge_alloc(allocated_t arr[], int size) {
+	int i = size - 1;
+	while (i) {
+		if (arr[i].pstart == arr[i - 1].pend) {
+			// Contiguos, merge
+			arr[i - 1].pend = arr[i].pend;
+			arr[i].pstart = arr[i].pend = 0;
+		}
+		i--;
+	}
+
+	for (i = 0; i < size; i++) {
+		if (arr[i].pstart == 0 && arr[i].pend == 0) {
+			Print(u"index %d is zero.\r\n", i);
+			continue;
+		}
+
+		if (i && (arr[i - 1].pstart == 0 && arr[i - 1].pend == 0) &&
+				(arr[i].pstart)) {
+			int j = i;
+			while (j) {
+				if (arr[j - 1].pstart == 0 && arr[j - 1].pend == 0) {
+					arr[j - 1].pstart = arr[j].pstart;
+					arr[j - 1].pend = arr[j].pend;
+					arr[j].pstart = arr[j].pend = 0;
+				} else {
+					break;
+				}
+				j--;
+			}
+		}
+	}
+}
+
+void reorder_alloc(bootinfo_t *bi) {
+	if (!bi) {
+		return;
+	}
+
+	bubble_sort(bi->alloc_pages, 20);
+	merge_alloc(bi->alloc_pages, 20);
 }

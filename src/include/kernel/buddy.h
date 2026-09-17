@@ -1,8 +1,8 @@
 #pragma once
 
-#include <global.h>
-#include <stdint.h>
+#include <kernel/global.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #define PAGE_SIZE 4096
 #define MAX_ORDER 11

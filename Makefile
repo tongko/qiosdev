@@ -16,6 +16,10 @@ KERNEL_DIR = $(SRC_DIR)/kernel
 export KERNEL_DIR
 KERNEL = $(BUILD_DIR)/qios.elf
 export KERNEL
+LIBK_DIR = $(SRC_DIR)/libk
+export LIBK_DIR
+LIBK = $(BUILD_DIR)/libk.a
+export LIBK
 EFI_IMG = $(BUILD_DIR)/BOOTX64.EFI
 export EFI_IMG
 ESP_IMG = $(BUILD_DIR)/esp.img
@@ -27,7 +31,7 @@ export GNU_OUT_A
 
 .PHONY: all clean print
 
-all: $(GNU_OUT_A) $(EFI_IMG) $(KERNEL)
+all: $(GNU_OUT_A) $(EFI_IMG) $(KERNEL) $(LIBK)
 	# 1. Create a clean 64MB file filled with zeroes
 	# 2. Create a modern GPT partition table on the image
 	# 3. Create a primary partition aligned to 2048 sectors (1MiB offset)
@@ -61,7 +65,10 @@ $(EFI_IMG):
 	git submodule update
 	$(MAKE) -C $(STUB_DIR)
 
-$(KERNEL):
+$(LIBK):
+	$(MAKE) -C $(LIBK_DIR)
+
+$(KERNEL): $(LIBK)
 	$(MAKE) -C $(KERNEL_DIR)
 
 $(GNUEFI_OUT_DIR):

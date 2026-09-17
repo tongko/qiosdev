@@ -1,8 +1,6 @@
 #include <kernel/gdt.h>
+#include <kernel/global.h>
 #include <stdint.h>
-
-gdt_entry_t _gdt[5];
-gdtptr_t _gdt_ptr;
 
 void gdt_init() {
 	// 0x00: Null descriptor

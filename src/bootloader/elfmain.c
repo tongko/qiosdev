@@ -141,6 +141,12 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	bi.kstack_base = stack_pa;
 
 	Print(u"[DEBUG] FB paddr: 0x%lx\r\n", bi.frame_buff.base_addr);
+	reorder_alloc(&bi);
+	Print(u"[DEBUG] Allocated pages:\r\n");
+	for (UINTN i = 0; i < 20; i++) {
+		Print(u"[DEBUG]\t%d: start=0x%lx, end=0x%lx\r\n", i,
+					bi.alloc_pages[i].pstart, bi.alloc_pages[i].pend);
+	}
 
 	Print(u"[efi_main] Exiting boot service... ");
 	do {

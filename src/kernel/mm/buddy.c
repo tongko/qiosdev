@@ -2,6 +2,7 @@
 #include <kernel/buddy.h>
 #include <libk/string.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 // free_list[order] is head of linked list for blocks of 2^order pages
 static page_t *_free_list[MAX_ORDER + 1];
@@ -135,7 +136,7 @@ void buddy_add_range(uintptr_t start_pa, uintptr_t end_pa) {
 			order++;
 		}
 
-		struct page *p = &_page_array[idx];
+		page_t *p = &_page_array[idx];
 		p->is_free = true;
 		p->order = order;
 		list_add(&_free_list[order], p);
@@ -195,11 +196,26 @@ void buddy_init(mem_descriptor_t *map, size_t msz, size_t dsz) {
 	for (size_t off = 0; off < msz; off += dsz) {
 		mem_descriptor_t *d = (void *)((uintptr_t)map + off);
 		if (!is_ramtype(d)) {
-			continue; // EfiConventionalMemory
+			continue;
 		}
 
 		uintptr_t s = d->pstart;
 		uintptr_t e = s + d->num_pg * PAGE_SIZE;
-		buddy_add_range(s, e);
+		size_t i = 0;
+		while (i < 20) {
+			allocated_t a = _bi.alloc_pages[i];
+			if (a.pstart == s) {
+				// skip a
+				s = a.pend;
+			} else if (a.pstart >= s && a.pstart < e) {
+				// a is part of d;
+				buddy_add_range(s, a.pstart);
+				s = a.pend;
+			}
+		}
+
+		if (s < e) {
+			buddy_add_range(s, e);
+		}
 	}
 }

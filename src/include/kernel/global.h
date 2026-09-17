@@ -80,6 +80,11 @@ typedef struct {
 	size_t desc_size;
 } memmap_t;
 
+typedef struct {
+	paddr_t pstart;
+	paddr_t pend;
+} allocated_t;
+
 // Boot info passed to kernel after ExitBootServices
 typedef struct {
 	uint32_t flags; // Bitmask of boot info flags
@@ -92,7 +97,7 @@ typedef struct {
 	paddr_t pml4_paddr;
 	paddr_t kernel_phys_start;
 	paddr_t kstack_base;
-	paddr_t alloc_pages[20];
+	allocated_t alloc_pages[20];
 } bootinfo_t;
 
 // Define our GDT with 5 entries
@@ -102,4 +107,4 @@ extern gdtptr_t _gdt_ptr;
 extern idt_entry_t _idt[256];
 extern idtptr_t _idt_ptr;
 
-extern bootinfo_t *_bootinfo;
+extern bootinfo_t _bi;
