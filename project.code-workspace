@@ -1,0 +1,24 @@
+{
+	"folders": [
+		{
+			"name": "Root",
+			"path": "./"
+		},
+		{
+			"name": "Headers",
+			"path": "src/include"
+		},
+		{
+			"name": "UEFI Boot Loader",
+			"path": "src/bootloader"
+		},
+		{
+			"name": "Kernel main",
+			"path": "src/kernel"
+		},
+		{
+			"libk": "Kernel library",
+			"path": "src/libk"
+		}
+	]
+}
