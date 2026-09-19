@@ -32,7 +32,7 @@ if [ -z "$1" ]; then
 		-smp 4 \
 		-m 4096M \
 		-machine q35 \
-		-device virtio-vga-gl -display sdl,gl=on \
+		-display gtk \
 		-drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
 		-drive format=raw,file=build/esp.img,index=0,media=disk \
 		-device usb-kbd \
@@ -45,7 +45,7 @@ else
 		-smp 4 \
 		-m 4096M \
 		-machine q35 \
-		-device virtio-vga-gl -display sdl,gl=on \
+		-display gtk \
 		-drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
 		-drive if=pflash,format=raw,file="$LOCAL_VARS" \
 		-drive format=raw,file=build/esp.img,index=0,media=disk \
@@ -54,3 +54,5 @@ else
 		-serial stdio \
 		-s -S
 fi
+
+#		-device virtio-vga-gl -display sdl,gl=on \

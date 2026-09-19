@@ -1,8 +1,8 @@
 #pragma once
 
 #include <kernel/global.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define PAGE_SIZE 4096
 #define MAX_ORDER 11
@@ -24,11 +24,9 @@ struct page {
 // Convert physical address to page index
 static inline size_t pa_to_idx(uintptr_t pa) { return pa >> PAGE_SHIFT; }
 // Convert page index to physical address
-static inline uintptr_t idx_to_pa(size_t idx) {
-	return (uintptr_t)idx << PAGE_SHIFT;
-}
+static inline uintptr_t idx_to_pa(size_t idx) { return (uintptr_t)idx << PAGE_SHIFT; }
 
 uintptr_t buddy_alloc(int req_order);
 void buddy_free(uintptr_t pa, int order);
 void buddy_add_range(uintptr_t start_pa, uintptr_t end_pa);
-void init_buddy(mem_descriptor_t *map, size_t msz, size_t dsz);
+void buddy_init(mem_descriptor_t *map, size_t msz, size_t dsz);

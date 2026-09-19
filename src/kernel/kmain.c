@@ -1,10 +1,11 @@
-#include <kernel/global.h>
-#include <kernel/kmain.h>
 #include <kernel/gdt.h>
+#include <kernel/global.h>
 #include <kernel/idt.h>
+#include <kernel/kmain.h>
 #include <kernel/mm.h>
-#include <stdbool.h>
+#include <kernel/tsc.h>
 #include <libk/string.h>
+#include <stdbool.h>
 
 #define COLOR_ARGB(a, r, g, b)                                                 \
 	(((uint32_t)(a) << 24) | ((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) |      \
@@ -17,12 +18,15 @@ void kmain(bootinfo_t *bi) {
 	// copy bootinfo so we can reclaim bootloader data later
 	memcpy(&_bi, bi, sizeof(bootinfo_t));
 
+	_tsc_start = bi->tsc_start;
+	_tsc_hz = bi->tsc_hz;
+
 	// Get GDT working first
 	gdt_init();
 	idt_init();
 
 	// memory and page frame allocator
-	mem_init(&_bi);
+	mm_init();
 
 	uint32_t bg_color = COLOR_ARGB(0, 30, 40, 60);
 	paint_background(bi, bg_color);

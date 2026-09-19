@@ -1,8 +1,8 @@
-#include <kernel/global.h>
 #include <kernel/buddy.h>
+#include <kernel/global.h>
 #include <libk/string.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // free_list[order] is head of linked list for blocks of 2^order pages
 static page_t *_free_list[MAX_ORDER + 1];

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef uintptr_t paddr_t;
 typedef uint64_t vaddr_t;
@@ -9,13 +9,13 @@ typedef uint64_t vaddr_t;
 #pragma pack(push, 1)
 
 typedef struct {
-	uint16_t isr_low;		// Lower 16 bits of ISR's addr
+	uint16_t isr_low;	  // Lower 16 bits of ISR's addr
 	uint16_t kernel_cs; // GDT selector for kernel (0x08)
-	uint8_t ist;				// Interrupt Stack Table offset (0 if unused)
+	uint8_t ist;		  // Interrupt Stack Table offset (0 if unused)
 	uint8_t attributes; // Type and attributes
-	uint16_t isr_mid;		// Middle 16 bits of ISR's addr
-	uint32_t isr_high;	// Higher 32 bits of ISR's addr
-	uint32_t reserved;	// Set to 0
+	uint16_t isr_mid;	  // Middle 16 bits of ISR's addr
+	uint32_t isr_high;  // Higher 32 bits of ISR's addr
+	uint32_t reserved;  // Set to 0
 } idt_entry_t;
 
 typedef struct {
@@ -51,12 +51,12 @@ typedef enum {
 } px_format_t;
 
 typedef struct {
-	uint32_t *base_addr;			// Pointer to the start of video memory
-	size_t size;							// Total size of the framebuffer in bytes
-	uint32_t width;						// Horizontal resolution (e.g., 1920)
-	uint32_t height;					// Vertical resolution (e.g., 1080)
+	uint32_t *base_addr;		  // Pointer to the start of video memory
+	size_t size;				  // Total size of the framebuffer in bytes
+	uint32_t width;			  // Horizontal resolution (e.g., 1920)
+	uint32_t height;			  // Vertical resolution (e.g., 1080)
 	uint32_t px_per_scanline; // The actual row width in memory
-	px_format_t px_format;		// Enum of pixel format
+	px_format_t px_format;	  // Enum of pixel format
 } framebuffer_t;
 
 typedef struct {
@@ -64,8 +64,8 @@ typedef struct {
 	uint32_t pad;
 	paddr_t pstart; // Field size is 64 bits
 	vaddr_t vstart; // Field size is 64 bits
-	size_t num_pg;	// Field size is 64 bits
-	uint64_t attr;	// Field size is 64 bits
+	size_t num_pg;	 // Field size is 64 bits
+	uint64_t attr;	 // Field size is 64 bits
 } mem_descriptor_t;
 
 typedef struct {
@@ -88,6 +88,8 @@ typedef struct {
 // Boot info passed to kernel after ExitBootServices
 typedef struct {
 	uint32_t flags; // Bitmask of boot info flags
+	uint64_t tsc_hz;
+	uint64_t tsc_start;
 	// framebuffer
 	framebuffer_t frame_buff;
 	// memory map

@@ -19,7 +19,7 @@ CFLAGS = -ffreestanding \
 
 OUTPUT = $(BUILD_DIR)/libk.a
 
-.PHONY: all clean print
+.PHONY: all clean
 
 all: $(OUTPUT)
 	@echo "===================="

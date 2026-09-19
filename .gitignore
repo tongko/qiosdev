@@ -78,4 +78,4 @@ qemu_log.txt
 
 # ========== Misc ================
 MY_VARS.fd
-gnu-efi/
+!src/drivers/*

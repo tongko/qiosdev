@@ -29,7 +29,7 @@ export GNUEFI_OUT_DIR
 GNU_OUT_A = $(GNUEFI_OUT_DIR)/libefi.a
 export GNU_OUT_A
 
-.PHONY: all clean print
+.PHONY: all clean print tests
 
 all: $(GNU_OUT_A) $(EFI_IMG) $(KERNEL) $(LIBK)
 	# 1. Create a clean 64MB file filled with zeroes
@@ -93,3 +93,8 @@ clean:
 # 	$(MAKE) -C $(SRC_DIR) clean
 	rm -f $(ESP_IMG) $(ELF_IMG)
 	rm -fr $(BUILD_DIR)
+
+tests: tests/test_vsprintf.c src/libk/stdio/vsprintf.c
+	gcc -g -Wall -o test_vsprintf tests/test_vsprintf.c src/libk/stdio/vsprintf.c \
+		src/libk/stdlib/itoa.c src/libk/string/reverse.c -Isrc/include
+	./test_vsprintf

@@ -1,0 +1,13 @@
+BasedOnStyle: LLVM
+IndentWidth: 3
+TabWidth: 3
+UseTab: Always
+ColumnLimit: 120
+
+# Optional extra tuning for C / UEFI code (optional, safe to keep)
+BinPackArguments: false
+BinPackParameters: false
+ContinuationIndentWidth: 3
+ReflowComments: true
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: None

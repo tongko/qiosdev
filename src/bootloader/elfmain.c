@@ -1,12 +1,12 @@
-#include <efimain.h>
-#include <efiglobal.h>
 #include <bootinfo.h>
+#include <efi.h>
+#include <efiglobal.h>
+#include <efilib.h>
+#include <efimain.h>
+#include <elf64.h>
+#include <extfs.h>
 #include <memmap.h>
 #include <paging.h>
-#include <extfs.h>
-#include <elf64.h>
-#include <efi.h>
-#include <efilib.h>
 
 #define COLOR_ARGB(a, r, g, b)                                                 \
 	(((UINT32)(a) << 24) | ((UINT32)(r) << 16) | ((UINT32)(g) << 8) | (UINT32)(b))
@@ -56,6 +56,21 @@ static void ensure_nxe_enabled(void) {
 	}
 }
 
+static inline UINTN rdtsc(void) {
+	UINT32 lo, hi;
+
+	__asm__ volatile("rdtsc" : "=a"(lo), "=d"(hi));
+	return (UINTN)(hi << 32) | lo;
+}
+
+static void tsc_init(bootinfo_t *bi) {
+	UINTN tsc_start = rdtsc();
+	BS->Stall(1000000); // Stall for 1 second
+	UINTN tsc_end = rdtsc();
+	bi->tsc_freq_hz = tsc_end - tsc_start;
+	bi->tsc_start = tsc_start;
+}
+
 EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	// What this boot loader does:
 	// 1. Setup simple paging, but not switching to it yet.
@@ -71,7 +86,8 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	// _ih = ih;
 	// _st = st;
 	InitializeLib(ih, st);
-	_himage = ih; // set as global variable
+	_himage = ih;	 // set as global variable
+	tsc_init(&bi); // Init timing
 
 	// Check if CPU support IA32_EFER.NXE
 	ensure_nxe_enabled();
@@ -150,6 +166,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 
 	Print(u"[efi_main] Exiting boot service... ");
 	do {
+		Print(u" .");
 		EFI_MEMORY_DESCRIPTOR *map;
 		UINTN msz, dsz, key;
 		BS->FreePool(bi.mem_map.map);
@@ -158,7 +175,6 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 			Print(u"❌");
 			return status;
 		}
-		Print(u" .");
 		bi.mem_map.map = map;
 		bi.mem_map.map_size = msz;
 		bi.mem_map.desc_size = dsz;
