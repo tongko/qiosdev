@@ -5,7 +5,9 @@
 
 static UINT64 *_pml4_table;
 
-bool is_paging_init() { return _pml4_table != NULL; }
+bool is_paging_init() {
+	return _pml4_table != NULL;
+}
 
 /*****************************************************************************
  * function: paging_init
@@ -51,11 +53,9 @@ EFI_STATUS hhdm_init(IN EFI_PHYSICAL_ADDRESS highest_paddr) {
 	}
 
 	Print(u"[hhdm_init] Mapping 0x0 - 0x%lx as HHDM.\r\n", highest_paddr);
-	EFI_STATUS status =
-			map_virt_addr(HHDM_OFFSET, 0, PAGE_WRITE_BACK, highest_paddr, PAGE_2M);
+	EFI_STATUS status = map_virt_addr(HHDM_OFFSET, 0, PAGE_WRITE_BACK, highest_paddr, PAGE_2M);
 	if (EFI_ERROR(status)) {
-		Print(u"%E❌ [hhdm_init] Mapping HHDM virtual address failed: %r%N\r\n",
-					status);
+		Print(u"%E❌ [hhdm_init] Mapping HHDM virtual address failed: %r%N\r\n", status);
 		return status;
 	}
 
@@ -66,11 +66,10 @@ EFI_STATUS hhdm_init(IN EFI_PHYSICAL_ADDRESS highest_paddr) {
  * function: map_virt_addr
  * Map virtual address to physical address in _pml4_table
  ******************************************************************************/
-EFI_STATUS map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr,
-												 UINT64 flags, UINTN sz, page_type_t type) {
-	if (!sz ||
-			(type == PAGE_2M && (vaddr % PAGE_HUGE_SIZE || paddr % PAGE_HUGE_SIZE)) ||
-			(type == PAGE_4K && (vaddr % EFI_PAGE_SIZE || paddr % EFI_PAGE_SIZE))) {
+EFI_STATUS
+map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr, UINT64 flags, UINTN sz, page_type_t type) {
+	if (!sz || (type == PAGE_2M && (vaddr % PAGE_HUGE_SIZE || paddr % PAGE_HUGE_SIZE)) ||
+		 (type == PAGE_4K && (vaddr % EFI_PAGE_SIZE || paddr % EFI_PAGE_SIZE))) {
 		Print(u"%E❌ [map_virt_addr] Invalid parameters.%N\r\n");
 		return EFI_INVALID_PARAMETER;
 	}
@@ -95,8 +94,7 @@ EFI_STATUS map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr,
 		UINTN pd_idx = PD_IDX(cur_vaddr);
 
 		if (!(_pml4_table[pml4_idx] & PAGE_PRESENT)) {
-			UINT64 *new_pdpt =
-					(UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
+			UINT64 *new_pdpt = (UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
 			if (!new_pdpt) {
 				Print(u"%E❌ [map_virt_addr] PDPT allocate page failed.\r\n");
 				return EFI_OUT_OF_RESOURCES;
@@ -107,8 +105,7 @@ EFI_STATUS map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr,
 		UINT64 *pdpt = (UINT64 *)(_pml4_table[pml4_idx] & ADDRESS_MASK);
 
 		if (!(pdpt[pdpt_idx] & PAGE_PRESENT)) {
-			UINT64 *new_pd =
-					(UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
+			UINT64 *new_pd = (UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
 			if (!new_pd) {
 				Print(u"%E❌ [map_virt_addr] PD allocate page failed.\r\n");
 				return EFI_OUT_OF_RESOURCES;
@@ -123,8 +120,7 @@ EFI_STATUS map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr,
 		}
 
 		if (!(pd[pd_idx] & PAGE_PRESENT)) {
-			UINT64 *new_pt =
-					(UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
+			UINT64 *new_pt = (UINT64 *)alloc_pages(AllocateAnyPages, EfiLoaderData, 1);
 			if (!new_pt) {
 				Print(u"%E❌ [map_virt_addr] PT allocate page failed.\r\n");
 				return EFI_OUT_OF_RESOURCES;

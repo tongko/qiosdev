@@ -11,7 +11,7 @@ unsigned int atoi(const char *str) {
 		if (!ISDIGIT(str[i])) {
 			return result;
 		}
-		result = result * 10 + str[i] - 48;	   // 48 == '0'
+		result = result * 10 + str[i] - 48; // 48 == '0'
 	}
 
 	return result;

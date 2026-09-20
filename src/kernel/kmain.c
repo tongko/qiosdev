@@ -2,14 +2,14 @@
 #include <kernel/global.h>
 #include <kernel/idt.h>
 #include <kernel/kmain.h>
+#include <kernel/klog.h>
 #include <kernel/mm.h>
+#include <kernel/serial.h>
 #include <kernel/tsc.h>
 #include <libk/string.h>
 #include <stdbool.h>
 
-#define COLOR_ARGB(a, r, g, b)                                                 \
-	(((uint32_t)(a) << 24) | ((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) |      \
-	 (uint32_t)(b))
+#define COLOR_ARGB(a, r, g, b) (((uint32_t)(a) << 24) | ((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b))
 
 void kmain(bootinfo_t *bi) {
 	// stop interrup
@@ -21,15 +21,30 @@ void kmain(bootinfo_t *bi) {
 	_tsc_start = bi->tsc_start;
 	_tsc_hz = bi->tsc_hz;
 
+	// Logging first: everything below this line can be reported, and printk()
+	// only needs the TSC plus a polled COM1, no IDT or heap.
+	log_init();
+	serial_log_init();
+
+	printk("qios: kernel entered, tsc = %llu Hz", (unsigned long long)_tsc_hz);
+	printk("qios: framebuffer %ux%u stride=%u fmt=%u at %p",
+			 (unsigned)bi->frame_buff.width,
+			 (unsigned)bi->frame_buff.height,
+			 (unsigned)bi->frame_buff.px_per_scanline,
+			 (unsigned)bi->frame_buff.px_format,
+			 (void *)bi->frame_buff.base_addr);
+
 	// Get GDT working first
 	gdt_init();
 	idt_init();
 
 	// memory and page frame allocator
 	mm_init();
+	printk("qios: memory subsystem ready, %llu MiB installed", (unsigned long long)(bi->total_installed_ram >> 20));
 
 	uint32_t bg_color = COLOR_ARGB(0, 30, 40, 60);
 	paint_background(bi, bg_color);
+	printk("qios: painted %ux%u background", (unsigned)bi->frame_buff.width, (unsigned)bi->frame_buff.height);
 
 	while (true) {
 		__asm__ volatile("hlt");

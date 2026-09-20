@@ -1,9 +1,10 @@
 #include <libk/string.h>
 
 char *strcat(char *dest, const char *src) {
-	char *	  p = dest;
+	char *p = dest;
 	const char *s = src;
-	while (*p++) {}
+	while (*p++) {
+	}
 	p--;
 
 	while (*s != '\0') {

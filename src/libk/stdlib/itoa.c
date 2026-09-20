@@ -10,9 +10,9 @@ size_t itoa(int value, char *str, int base, const char *digit_str) {
 		return 0;
 	}
 
-	char *	p = str;
+	char *p = str;
 	int quotient = value;
-	size_t	sz = 0;
+	size_t sz = 0;
 
 	//	Conversion. Number is reversed.
 	do {
@@ -41,9 +41,9 @@ size_t ltoa(long long value, char *str, int base, const char *digit_str) {
 		return 0;
 	}
 
-	char *	p = str;
+	char *p = str;
 	long long quotient = value;
-	size_t	sz = 0;
+	size_t sz = 0;
 
 	//	Conversion. Number is reversed.
 	do {
@@ -72,9 +72,9 @@ size_t utoa(unsigned int value, char *str, int base, const char *digit_str) {
 		return 0;
 	}
 
-	char *	 p = str;
+	char *p = str;
 	unsigned int quotient = value;
-	size_t	 sz = 0;
+	size_t sz = 0;
 
 	//	Conversion. Number is reversed.
 	do {
@@ -98,9 +98,9 @@ size_t ultoa(unsigned long long value, char *str, int base, const char *digit_st
 		return 0;
 	}
 
-	char *	 p = str;
+	char *p = str;
 	unsigned long long quotient = value;
-	size_t	 sz = 0;
+	size_t sz = 0;
 
 	//	Conversion. Number is reversed.
 	do {

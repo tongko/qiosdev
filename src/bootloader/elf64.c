@@ -16,8 +16,7 @@ static UINT64 elfflags_to_paging_attr(UINT32 p_flags) {
 		paging_attributes |= PAGE_WRITE;
 	}
 
-	Print(u"[DEBUG] _nxe_enabled is: %s\r\n",
-				(_nxe_enabled && (p_flags & PF_X)) ? u"true" : u"false");
+	Print(u"[DEBUG] _nxe_enabled is: %s\r\n", (_nxe_enabled && (p_flags & PF_X)) ? u"true" : u"false");
 	// 2. Handle Executable Permission (Invert for x86_64 NX)
 	if (_nxe_enabled) {
 		if (!(p_flags & PF_X)) {
@@ -47,11 +46,9 @@ EFI_STATUS open_file(IN const CHAR16 *fname, OUT EFI_FILE_PROTOCOL **out_file) {
 	*out_file = NULL;
 	Print(u"[open_file] Get all handles with SimpleFileSystem protocol... ");
 	// Get all handles with SimpleFileSystem protocol
-	EFI_STATUS status = BS->LocateHandleBuffer(ByProtocol, &_fs_protocol_guid,
-																						 NULL, &count, &hbuffer);
+	EFI_STATUS status = BS->LocateHandleBuffer(ByProtocol, &_fs_protocol_guid, NULL, &count, &hbuffer);
 	if (EFI_ERROR(status)) {
-		Print(u"\r\n%E❌ [open_file] Locate handle buffer failed: %r%N\r\n",
-					status);
+		Print(u"\r\n%E❌ [open_file] Locate handle buffer failed: %r%N\r\n", status);
 		return status;
 	}
 	Print(u"done, found %d.\r\n", count);
@@ -63,15 +60,15 @@ EFI_STATUS open_file(IN const CHAR16 *fname, OUT EFI_FILE_PROTOCOL **out_file) {
 		EFI_FILE_PROTOCOL *root = NULL;
 
 		Print(u"[open_file] Opening simple file system protocol... ");
-		status = BS->OpenProtocol(hbuffer[i], &_fs_protocol_guid, (VOID **)&fs,
-															NULL, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+		status =
+			BS->OpenProtocol(hbuffer[i], &_fs_protocol_guid, (VOID **)&fs, NULL, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
 		if (EFI_ERROR(status)) {
 			if (!failed) {
 				Print(u"\r\n");
 			}
 			Print(u"%E⚠️ [open_file] Open simple file system protocol failed: "
-						u"%r%N\r\n",
-						status);
+					u"%r%N\r\n",
+					status);
 			failed = true;
 			continue;
 		}
@@ -174,8 +171,7 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 		}
 
 		UINTN pg_cnt = (hdr->p_memsz + EFI_PAGE_SIZE - 1) / EFI_PAGE_SIZE;
-		EFI_PHYSICAL_ADDRESS seg_dest =
-				alloc_pages(AllocateAnyPages, EfiLoaderCode, pg_cnt);
+		EFI_PHYSICAL_ADDRESS seg_dest = alloc_pages(AllocateAnyPages, EfiLoaderCode, pg_cnt);
 		if (!seg_dest) {
 			FreePool(phdrs);
 			Print(u"[DEBUG] hdr->p_memsz: %lx\r\n", hdr->p_memsz);
@@ -184,12 +180,11 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 			return EFI_OUT_OF_RESOURCES;
 		}
 		Print(u"done.\r\n[load_elf] Load file segment bytes into newly allocated "
-					u"buffer space... ");
+				u"buffer space... ");
 		status = hfile->SetPosition(hfile, hdr->p_offset);
 		if (EFI_ERROR(status)) {
 			FreePool(phdrs);
-			Print(u"%E❌ Can't set position of file handle for segment %d: %r%N\r\n",
-						i, status);
+			Print(u"%E❌ Can't set position of file handle for segment %d: %r%N\r\n", i, status);
 			return status;
 		}
 

@@ -135,8 +135,7 @@ EFI_STATUS mem_init(bootinfo_t *bi) {
  * function: get_memmap
  * Get memory map descriptor from UEFI
  ******************************************************************************/
-EFI_STATUS get_memmap(OUT EFI_MEMORY_DESCRIPTOR **out_map, OUT UINTN *map_sz,
-											OUT UINTN *desc_sz, OUT UINTN *key) {
+EFI_STATUS get_memmap(OUT EFI_MEMORY_DESCRIPTOR **out_map, OUT UINTN *map_sz, OUT UINTN *desc_sz, OUT UINTN *key) {
 	EFI_STATUS status;
 	UINTN msz = 0, dsz = 0;
 	EFI_MEMORY_DESCRIPTOR *map = NULL;
@@ -188,8 +187,7 @@ EFI_STATUS get_memmap(OUT EFI_MEMORY_DESCRIPTOR **out_map, OUT UINTN *map_sz,
  * function: get_non_resv_mem
  * Calculate the highest non-reserved-memory for HHDM
  ******************************************************************************/
-EFI_STATUS get_non_resv_mem(IN memmap_t *mem_map,
-														OUT EFI_PHYSICAL_ADDRESS *highest_addr) {
+EFI_STATUS get_non_resv_mem(IN memmap_t *mem_map, OUT EFI_PHYSICAL_ADDRESS *highest_addr) {
 	if (!(mem_map && highest_addr)) {
 		return EFI_INVALID_PARAMETER;
 	}
@@ -211,8 +209,7 @@ EFI_STATUS get_non_resv_mem(IN memmap_t *mem_map,
 	EFI_PHYSICAL_ADDRESS prev = 0;
 #endif
 	for (UINTN i = 0; i < num_e; i++) {
-		EFI_MEMORY_DESCRIPTOR *desc =
-				(EFI_MEMORY_DESCRIPTOR *)((UINT8 *)map + (i * dsz));
+		EFI_MEMORY_DESCRIPTOR *desc = (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)map + (i * dsz));
 #if defined EFI_DEBUG && defined(EFI_DEBUG_MEM)
 		Print(u"[DEBUG][get_non_resv_mem]\tDescriptor %d - ", i);
 		if (prev != desc->PhysicalStart) {
@@ -220,23 +217,17 @@ EFI_STATUS get_non_resv_mem(IN memmap_t *mem_map,
 		} else {
 			Print(u"✅\r\n");
 		}
-		Print(u"[DEBUG][get_non_resv_mem]\t\tType       : %s\r\n",
-					get_type_str(desc->Type));
-		Print(u"[DEBUG][get_non_resv_mem]\t\tVirt start : 0x%lx\r\n",
-					desc->VirtualStart);
-		Print(u"[DEBUG][get_non_resv_mem]\t\tPhys start : 0x%lx\r\n",
-					desc->PhysicalStart);
+		Print(u"[DEBUG][get_non_resv_mem]\t\tType       : %s\r\n", get_type_str(desc->Type));
+		Print(u"[DEBUG][get_non_resv_mem]\t\tVirt start : 0x%lx\r\n", desc->VirtualStart);
+		Print(u"[DEBUG][get_non_resv_mem]\t\tPhys start : 0x%lx\r\n", desc->PhysicalStart);
 		Print(u"[DEBUG][get_non_resv_mem]\t\tPadding    : %d\r\n", desc->Pad);
-		Print(u"[DEBUG][get_non_resv_mem]\t\tNum Pages  : %lu\r\n",
-					desc->NumberOfPages);
-		Print(u"[DEBUG][get_non_resv_mem]\t\tAttributes : %s\r\n",
-					get_attr_str(desc->Attribute));
+		Print(u"[DEBUG][get_non_resv_mem]\t\tNum Pages  : %lu\r\n", desc->NumberOfPages);
+		Print(u"[DEBUG][get_non_resv_mem]\t\tAttributes : %s\r\n", get_attr_str(desc->Attribute));
 		prev = (desc->PhysicalStart + (desc->NumberOfPages * 4096));
 		Print(u"[DEBUG][get_non_resv_mem]\t\tPhys end   : 0x%lx\r\n", prev);
 #endif
 		if (IS_RAM_TYPE(desc->Type)) {
-			EFI_PHYSICAL_ADDRESS paddr =
-					desc->PhysicalStart + (desc->NumberOfPages * EFI_PAGE_SIZE);
+			EFI_PHYSICAL_ADDRESS paddr = desc->PhysicalStart + (desc->NumberOfPages * EFI_PAGE_SIZE);
 			if (paddr > haddr) {
 				haddr = paddr;
 			}
@@ -247,8 +238,7 @@ EFI_STATUS get_non_resv_mem(IN memmap_t *mem_map,
 	return EFI_SUCCESS;
 }
 
-EFI_PHYSICAL_ADDRESS alloc_pages(EFI_ALLOCATE_TYPE type_alloc,
-																 EFI_MEMORY_TYPE type_mem, UINTN num_pg) {
+EFI_PHYSICAL_ADDRESS alloc_pages(EFI_ALLOCATE_TYPE type_alloc, EFI_MEMORY_TYPE type_mem, UINTN num_pg) {
 	EFI_PHYSICAL_ADDRESS paddr = 0;
 	EFI_STATUS status = BS->AllocatePages(type_alloc, type_mem, num_pg, &paddr);
 	if (EFI_ERROR(status)) {
@@ -262,8 +252,7 @@ EFI_PHYSICAL_ADDRESS alloc_pages(EFI_ALLOCATE_TYPE type_alloc,
 	for (i = 0; i < 20; i++) {
 		allocated_t a = _bi->alloc_pages[i];
 		if (a.pend == paddr) {
-			a.pend =
-					paddr + (num_pg * EFI_PAGE_SIZE); // extend the allocated to new range
+			a.pend = paddr + (num_pg * EFI_PAGE_SIZE); // extend the allocated to new range
 			break;
 		}
 	}

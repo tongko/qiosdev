@@ -22,9 +22,13 @@ struct page {
 #define HHDM_INV(va) ((uintptr_t)(va) - HHDM_OFFSET)
 
 // Convert physical address to page index
-static inline size_t pa_to_idx(uintptr_t pa) { return pa >> PAGE_SHIFT; }
+static inline size_t pa_to_idx(uintptr_t pa) {
+	return pa >> PAGE_SHIFT;
+}
 // Convert page index to physical address
-static inline uintptr_t idx_to_pa(size_t idx) { return (uintptr_t)idx << PAGE_SHIFT; }
+static inline uintptr_t idx_to_pa(size_t idx) {
+	return (uintptr_t)idx << PAGE_SHIFT;
+}
 
 uintptr_t buddy_alloc(int req_order);
 void buddy_free(uintptr_t pa, int order);

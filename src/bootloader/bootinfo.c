@@ -17,8 +17,7 @@ EFI_STATUS bootinfo_init(bootinfo_t *out_bi) {
 	if (EFI_ERROR(status) || !gop) {
 		// If it returns and error, something is fundamentally wrong with the
 		// display
-		Print(u"%E❌ [bootinfo_init] Could not locate graphics handle: %r%N\r\n",
-					status);
+		Print(u"%E❌ [bootinfo_init] Could not locate graphics handle: %r%N\r\n", status);
 		return status;
 	}
 	Print(u"done.\r\n");
@@ -27,8 +26,9 @@ EFI_STATUS bootinfo_init(bootinfo_t *out_bi) {
 	EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *infoc = NULL;
 	gop->QueryMode(gop, gop->Mode->Mode, &szc, &infoc);
 	Print(u"[bootinfo_init] Current graphics mode: fmt=%d,Hpx=%d,Vpx=%d\r\n",
-				infoc->PixelFormat, infoc->HorizontalResolution,
-				infoc->VerticalResolution);
+			infoc->PixelFormat,
+			infoc->HorizontalResolution,
+			infoc->VerticalResolution);
 
 #if defined(EFI_DEBUG) && defined(EFI_DEBUG_GOP)
 	Print(u"Enumerating all output mode:\r\n");
@@ -52,8 +52,8 @@ EFI_STATUS bootinfo_init(bootinfo_t *out_bi) {
 
 		// Will will default the resolution to 1024x768
 		//	TODO: set fallback if not found
-		if (info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor &&
-				info->HorizontalResolution == 1024 && info->VerticalResolution == 768) {
+		if (info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor && info->HorizontalResolution == 1024 &&
+			 info->VerticalResolution == 768) {
 			// Activate graphics mode
 			Print(u"[bootinfo_init] Set graphics mode to index %d\r\n", i);
 			gop->SetMode(gop, i);
@@ -107,8 +107,7 @@ static void merge_alloc(allocated_t arr[], int size) {
 			continue;
 		}
 
-		if (i && (arr[i - 1].pstart == 0 && arr[i - 1].pend == 0) &&
-				(arr[i].pstart)) {
+		if (i && (arr[i - 1].pstart == 0 && arr[i - 1].pend == 0) && (arr[i].pstart)) {
 			int j = i;
 			while (j) {
 				if (arr[j - 1].pstart == 0 && arr[j - 1].pend == 0) {

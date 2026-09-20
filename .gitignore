@@ -79,3 +79,7 @@ qemu_log.txt
 # ========== Misc ================
 MY_VARS.fd
 !src/drivers/*
+
+# Host unit test binaries
+test_ringbuf
+test_klog

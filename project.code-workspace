@@ -20,5 +20,9 @@
 			"libk": "Kernel library",
 			"path": "src/libk"
 		}
-	]
+	],
+	"settings": {
+		"C_Cpp.clang_format_style": "file",
+		"C_Cpp.vcFormat.wrap.preserveBlocks": "never"
+	}
 }

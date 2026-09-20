@@ -3,11 +3,11 @@
 #include <efi.h>
 #include <bootinfo.h>
 
-#define READ_CR3                                                               \
-	({                                                                           \
-		UINTN cr3;                                                                 \
-		__asm__ volatile("mov %%cr3, %0" : "=r"(cr3));                             \
-		cr3;                                                                       \
+#define READ_CR3                                                                                                       \
+	({                                                                                                                  \
+		UINTN cr3;                                                                                                       \
+		__asm__ volatile("mov %%cr3, %0" : "=r"(cr3));                                                                   \
+		cr3;                                                                                                             \
 	})
 
 #define SET_CR3(pml) __asm__ volatile("mov %0, %%cr3" : : "r"(pml) : "memory");
@@ -40,8 +40,7 @@
 #define PAGE_NX (1ULL << 63)
 // Unified Flag Combinations
 #define PAGE_WRITE_BACK (PAGE_PRESENT | PAGE_WRITE | PAGE_HUGE) // PCD=0, PWT=0
-#define PAGE_UNCACHEABLE                                                       \
-	(PAGE_PRESENT | PAGE_WRITE | PAGE_PCD | PAGE_PWT | PAGE_HUGE)
+#define PAGE_UNCACHEABLE (PAGE_PRESENT | PAGE_WRITE | PAGE_PCD | PAGE_PWT | PAGE_HUGE)
 
 typedef enum { PAGE_4K, PAGE_2M } page_type_t;
 
@@ -49,7 +48,7 @@ EFI_STATUS paging_init(IN bootinfo_t *bi);
 
 EFI_STATUS hhdm_init(EFI_PHYSICAL_ADDRESS highest_paddr);
 
-EFI_STATUS map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr,
-												 UINT64 flags, UINTN sz, page_type_t type);
+EFI_STATUS
+map_virt_addr(EFI_VIRTUAL_ADDRESS vaddr, EFI_PHYSICAL_ADDRESS paddr, UINT64 flags, UINTN sz, page_type_t type);
 
 bool is_paging_init();

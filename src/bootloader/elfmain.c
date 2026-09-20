@@ -8,13 +8,11 @@
 #include <memmap.h>
 #include <paging.h>
 
-#define COLOR_ARGB(a, r, g, b)                                                 \
-	(((UINT32)(a) << 24) | ((UINT32)(r) << 16) | ((UINT32)(g) << 8) | (UINT32)(b))
+#define COLOR_ARGB(a, r, g, b) (((UINT32)(a) << 24) | ((UINT32)(r) << 16) | ((UINT32)(g) << 8) | (UINT32)(b))
 
 #define IA32_EFER_MSR 0xC0000080
 #define IA32_EFER_NXE (1ULL << 11)
-#define READ_EFER_MSR(high, low)                                               \
-	__asm__ volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(IA32_EFER_MSR))
+#define READ_EFER_MSR(high, low) __asm__ volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(IA32_EFER_MSR))
 
 // should be in CPU module, but for now...
 static void ensure_nxe_enabled(void) {
@@ -30,11 +28,11 @@ static void ensure_nxe_enabled(void) {
 	// Check if the NXE bit (Bit 11) is set
 	if (efer & IA32_EFER_NXE) {
 		Print(u"[ensure_nxe_enabled] IA32_EFER.NXE is ALREADY enabled by UEFI "
-					u"firmware.\n");
+				u"firmware.\n");
 		_nxe_enabled = true;
 	} else {
 		Print(u"[ensure_nxe_enabled] IA32_EFER.NXE is DISABLED. Turning it on "
-					u"now... ");
+				u"now... ");
 
 		// Set Bit 11
 		efer |= IA32_EFER_NXE;
@@ -60,7 +58,7 @@ static inline UINTN rdtsc(void) {
 	UINT32 lo, hi;
 
 	__asm__ volatile("rdtsc" : "=a"(lo), "=d"(hi));
-	return (UINTN)(hi << 32) | lo;
+	return ((UINTN)hi << 32) | lo;
 }
 
 static void tsc_init(bootinfo_t *bi) {
@@ -86,7 +84,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	// _ih = ih;
 	// _st = st;
 	InitializeLib(ih, st);
-	_himage = ih;	 // set as global variable
+	_himage = ih;	// set as global variable
 	tsc_init(&bi); // Init timing
 
 	// Check if CPU support IA32_EFER.NXE
@@ -151,8 +149,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 		Print(u"%E❌ [efi_main] Failed to init boot info: %r%N\r\n", status);
 		return status;
 	}
-	EFI_PHYSICAL_ADDRESS stack_pa =
-			alloc_pages(AllocateAnyPages, EfiLoaderData, STACK_PAGE_SIZE);
+	EFI_PHYSICAL_ADDRESS stack_pa = alloc_pages(AllocateAnyPages, EfiLoaderData, STACK_PAGE_SIZE);
 	Print(u"[efi_main] Stack physical address: 0x%lx\r\n", stack_pa);
 	bi.kstack_base = stack_pa;
 
@@ -160,8 +157,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	reorder_alloc(&bi);
 	Print(u"[DEBUG] Allocated pages:\r\n");
 	for (UINTN i = 0; i < 20; i++) {
-		Print(u"[DEBUG]\t%d: start=0x%lx, end=0x%lx\r\n", i,
-					bi.alloc_pages[i].pstart, bi.alloc_pages[i].pend);
+		Print(u"[DEBUG]\t%d: start=0x%lx, end=0x%lx\r\n", i, bi.alloc_pages[i].pstart, bi.alloc_pages[i].pend);
 	}
 
 	Print(u"[efi_main] Exiting boot service... ");
@@ -194,16 +190,15 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 
 	SET_CR3(bi.pml4_paddr);
 
-	EFI_VIRTUAL_ADDRESS stack_top =
-			HHDM(stack_pa) + (STACK_PAGE_SIZE * EFI_PAGE_SIZE);
+	EFI_VIRTUAL_ADDRESS stack_top = HHDM(stack_pa) + (STACK_PAGE_SIZE * EFI_PAGE_SIZE);
 	(void)stack_top;
 	__asm__("mov %[stack], %%rsp\n" // rcx = arg1: stack_top
-					"mov %[boot], %%rdi\n"	// rdx = arg2: boot_info, becomes kernel SysV
-																	// 1st arg
-					"jmp *%[kernel]\n"			// r8 = arg3: kernel entry virtual address
-					:
-					: [stack] "r"(stack_top), [boot] "r"((void *)&bi), [kernel] "r"(kbuf)
-					: "memory");
+			  "mov %[boot], %%rdi\n"  // rdx = arg2: boot_info, becomes kernel SysV
+											  // 1st arg
+			  "jmp *%[kernel]\n"		  // r8 = arg3: kernel entry virtual address
+			  :
+			  : [stack] "r"(stack_top), [boot] "r"((void *)&bi), [kernel] "r"(kbuf)
+			  : "memory");
 
 	// Print(u"Shouhdn't reach here...");
 	while (true) {

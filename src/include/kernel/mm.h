@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define PAGE_SIZE 0x1000
 #define MAX_ORDER 10
 
 // ====================== Physical page (buddy backend) ======================
@@ -13,8 +12,12 @@ uintptr_t mm_alloc_pages(uint8_t order);
 void mm_free_pages(uintptr_t pa, uint8_t order);
 
 // allocate single 4k physical page (order 0)
-static inline uintptr_t mm_alloc_page(void) { return mm_alloc_pages(0); }
-static inline void mm_free_page(uintptr_t pa) { mm_free_pages(pa, 0); }
+static inline uintptr_t mm_alloc_page(void) {
+	return mm_alloc_pages(0);
+}
+static inline void mm_free_page(uintptr_t pa) {
+	mm_free_pages(pa, 0);
+}
 
 // ====================== Kernel heap (SLOB backend, kmalloc/kfree) ======================
 void mm_heap_init(void);

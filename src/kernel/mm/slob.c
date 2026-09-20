@@ -51,8 +51,7 @@ void *slob_alloc(size_t size) {
 				// Split block if leftover space is enough for new slob_block header
 				size_t leftover = blk->size - size;
 				if (leftover >= sizeof(slob_block_t) + 8) {
-					slob_block_t *new_blk =
-							(slob_block_t *)((uint8_t *)blk + sizeof(slob_block_t) + size);
+					slob_block_t *new_blk = (slob_block_t *)((uint8_t *)blk + sizeof(slob_block_t) + size);
 					new_blk->size = leftover - sizeof(slob_block_t);
 					new_blk->next = blk->next;
 
@@ -127,4 +126,6 @@ void slob_free(void *ptr) {
 	}
 }
 
-void slob_init(void) { _slob_page_list = NULL; }
+void slob_init(void) {
+	_slob_page_list = NULL;
+}
