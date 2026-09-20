@@ -16,8 +16,10 @@ static UINT64 elfflags_to_paging_attr(UINT32 p_flags) {
 		paging_attributes |= PAGE_WRITE;
 	}
 
+#if defined(EFI_DEBUG) && defined(EFI_DEBUG_ELF)
 	Print(u"[DEBUG] _nxe_enabled is: %s\r\n", (_nxe_enabled && (p_flags & PF_X)) ? u"true" : u"false");
-	// 2. Handle Executable Permission (Invert for x86_64 NX)
+#endif
+	//  2. Handle Executable Permission (Invert for x86_64 NX)
 	if (_nxe_enabled) {
 		if (!(p_flags & PF_X)) {
 			paging_attributes |= PAGE_NX;
@@ -174,8 +176,10 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 		EFI_PHYSICAL_ADDRESS seg_dest = alloc_pages(AllocateAnyPages, EfiLoaderCode, pg_cnt);
 		if (!seg_dest) {
 			FreePool(phdrs);
+#if defined(EFI_DEBUG) && defined(EFI_DEBUG_ELF)
 			Print(u"[DEBUG] hdr->p_memsz: %lx\r\n", hdr->p_memsz);
 			Print(u"[DEBUG] pg_cnt: %d\r\n", pg_cnt);
+#endif
 			Print(u"%E❌ allocate pages for segment %d failed.\r\n", i);
 			return EFI_OUT_OF_RESOURCES;
 		}
@@ -208,13 +212,17 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 		// Map the kernel into page table.
 		EFI_VIRTUAL_ADDRESS vaddr = hdr->p_vaddr;
 		UINT64 attr = elfflags_to_paging_attr(hdr->p_flags);
+#if defined(EFI_DEBUG) && defined(EFI_DEBUG_ELF)
 		Print(u"\r\n[DEBUG] attribute is %lx\r\n", attr);
+#endif
 		status = map_virt_addr(vaddr, seg_dest, attr, hdr->p_memsz, PAGE_4K);
 		if (EFI_ERROR(status)) {
 			FreePool(phdrs);
+#if defined(EFI_DEBUG) && defined(EFI_DEBUG_ELF)
 			Print(u"[DEBUG] hdr->p_vaddr: 0x%lx\r\n", vaddr);
 			Print(u"[DEBUG] attr: %lx\r\n", attr);
 			Print(u"[DEBUG] hdr->m_memsz: %lx\r\n", hdr->p_memsz);
+#endif
 			Print(u"%E❌ Can't map setment %d to paging: %r%N\r\n", i, status);
 			return status;
 		}

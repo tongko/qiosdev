@@ -253,6 +253,7 @@ EFI_PHYSICAL_ADDRESS alloc_pages(EFI_ALLOCATE_TYPE type_alloc, EFI_MEMORY_TYPE t
 		allocated_t a = _bi->alloc_pages[i];
 		if (a.pend == paddr) {
 			a.pend = paddr + (num_pg * EFI_PAGE_SIZE); // extend the allocated to new range
+			_bi->alloc_pages[i] = a;                   // a is only a copy, store it back
 			break;
 		}
 	}

@@ -83,3 +83,4 @@ MY_VARS.fd
 # Host unit test binaries
 test_ringbuf
 test_klog
+test_fb

@@ -63,10 +63,10 @@ static inline UINTN rdtsc(void) {
 
 static void tsc_init(bootinfo_t *bi) {
 	UINTN tsc_start = rdtsc();
-	BS->Stall(1000000); // Stall for 1 second
+	BS->Stall(100000); // Stall for 100 ms
 	UINTN tsc_end = rdtsc();
-	bi->tsc_freq_hz = tsc_end - tsc_start;
-	bi->tsc_start = tsc_start;
+	bi->tsc_freq_hz = (tsc_end - tsc_start) * 10;
+	bi->tsc_start = 0; // We start from kernel, not here
 }
 
 EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
@@ -149,16 +149,49 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 		Print(u"%E❌ [efi_main] Failed to init boot info: %r%N\r\n", status);
 		return status;
 	}
+
+	// hhdm_init() only mapped RAM (0 .. highest_phys_addr).  The GOP
+	// framebuffer is MMIO and can sit far above that (a 64-bit BAR on this
+	// machine), so HHDM(fb) would be an unmapped address and the kernel's
+	// first present() would page fault.  Map it, uncached, before the kernel
+	// ever sees it.
+	if (bi.frame_buff.base_addr != NULL && bi.frame_buff.size != 0) {
+		EFI_PHYSICAL_ADDRESS fb_pa = (EFI_PHYSICAL_ADDRESS)(UINTN)bi.frame_buff.base_addr;
+
+		// The firmware can hand back its own high-half alias of the BAR
+		// (HHDM_OFFSET + pa): normalise it to a physical address first.
+		if (fb_pa >= HHDM_OFFSET) {
+			fb_pa -= HHDM_OFFSET;
+		}
+
+		// 4K pages, PCD|PWT = uncached.  Do not use PAGE_UNCACHEABLE here:
+		// it has PAGE_HUGE set, and bit 7 of a 4K PTE means PAT, not huge.
+		status = map_virt_addr(HHDM(fb_pa), fb_pa, PAGE_PCD | PAGE_PWT, bi.frame_buff.size, PAGE_4K);
+		if (EFI_ERROR(status)) {
+			Print(u"%E❌ [efi_main] Mapping the framebuffer failed: %r%N\r\n", status);
+			return status;
+		}
+
+		// This is the address the kernel uses.
+		bi.frame_buff.base_addr = (UINT32 *)(UINTN)HHDM(fb_pa);
+		Print(u"[efi_main] Framebuffer pa 0x%lx -> HHDM 0x%lx (%lu bytes, uncached).\r\n", fb_pa,
+					(UINTN)HHDM(fb_pa), bi.frame_buff.size);
+	}
+
 	EFI_PHYSICAL_ADDRESS stack_pa = alloc_pages(AllocateAnyPages, EfiLoaderData, STACK_PAGE_SIZE);
 	Print(u"[efi_main] Stack physical address: 0x%lx\r\n", stack_pa);
 	bi.kstack_base = stack_pa;
 
+#if defined(EFI_DEBUG) && defined(EFI_DEBUG_PAGING)
 	Print(u"[DEBUG] FB paddr: 0x%lx\r\n", bi.frame_buff.base_addr);
+#endif
 	reorder_alloc(&bi);
+#if defined(EFI_DEBUG) && defined(EFI_DEBUG_PAGING)
 	Print(u"[DEBUG] Allocated pages:\r\n");
 	for (UINTN i = 0; i < 20; i++) {
 		Print(u"[DEBUG]\t%d: start=0x%lx, end=0x%lx\r\n", i, bi.alloc_pages[i].pstart, bi.alloc_pages[i].pend);
 	}
+#endif
 
 	Print(u"[efi_main] Exiting boot service... ");
 	do {
@@ -181,13 +214,10 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 		}
 	} while (status == EFI_INVALID_PARAMETER);
 
-	UINT32 color = COLOR_ARGB(0, 40, 50, 60);
-	for (UINTN y = 100; y < 200; y++) {
-		for (UINTN x = 100; x < 200; x++) {
-			bi.frame_buff.base_addr[(y * bi.frame_buff.px_per_scanline) + x] = color;
-		}
-	}
-
+	// The debug rectangle that used to be painted here is gone: the kernel now
+	// paints the background through the framebuffer driver, using the HHDM
+	// address mapped above.  Writing to the raw BAR address only worked while
+	// the firmware's own page tables were still loaded.
 	SET_CR3(bi.pml4_paddr);
 
 	EFI_VIRTUAL_ADDRESS stack_top = HHDM(stack_pa) + (STACK_PAGE_SIZE * EFI_PAGE_SIZE);

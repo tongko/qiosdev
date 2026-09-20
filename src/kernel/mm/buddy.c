@@ -164,20 +164,34 @@ void buddy_init(mem_descriptor_t *map, size_t msz, size_t dsz) {
 	size_t page_array_bytes = _total_page_count * sizeof(page_t);
 	// Find a free physical region large enough for _page_array, mark it as used.
 	// First ever fit.
+	size_t page_array_pgs = (page_array_bytes + PAGE_SIZE - 1) / PAGE_SIZE;
+	bool page_array_found = false;
+
 	for (size_t off = 0; off < msz; off += dsz) {
 		mem_descriptor_t *d = (void *)((uintptr_t)map + off);
-		if (!is_ramtype(0)) {
+
+		// NB: this used to be is_ramtype(0), i.e. is_ramtype(NULL), which is
+		// always false - so no region was ever picked and the page array was
+		// written to physical address 0 instead.
+		if (!is_ramtype(d) || d->num_pg < page_array_pgs) {
 			continue;
 		}
-		size_t sz = d->num_pg * PAGE_SIZE;
-		if (sz > page_array_bytes) {
-			// OK, large enough, pick this
-			_page_array_pa_base = d->pstart;
-			// Reset this descriptor
-			d->pstart += sz;
-			d->vstart += sz;
-			break;
-		}
+
+		// OK, large enough, pick this
+		_page_array_pa_base = d->pstart;
+
+		// Carve only the pages the array needs out of this descriptor, so the
+		// memory map walk below never adds them to the free lists.
+		d->pstart += (uintptr_t)page_array_pgs * PAGE_SIZE;
+		d->vstart += (uintptr_t)page_array_pgs * PAGE_SIZE;
+		d->num_pg -= page_array_pgs;
+		page_array_found = true;
+		break;
+	}
+
+	if (!page_array_found) {
+		_total_page_count = 0; // no room for page metadata: bring up nothing
+		return;
 	}
 
 	// (implement your own _page_array allocation here)
@@ -204,6 +218,12 @@ void buddy_init(mem_descriptor_t *map, size_t msz, size_t dsz) {
 		size_t i = 0;
 		while (i < 20) {
 			allocated_t a = _bi.alloc_pages[i];
+
+			i++; // without this the loop never terminates
+			if (!a.pstart) {
+				continue; // unused slot
+			}
+
 			if (a.pstart == s) {
 				// skip a
 				s = a.pend;

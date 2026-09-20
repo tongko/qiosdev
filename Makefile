@@ -102,10 +102,11 @@ HOST_LIBK = src/libk/stdio/vsprintf.c src/libk/stdio/vsnprintf.c \
             src/libk/string/reverse.c src/libk/string/strchr.c \
             src/libk/string/strlen.c src/libk/string/strncpy.c
 
-tests: test_vsprintf test_ringbuf test_klog
+tests: test_vsprintf test_ringbuf test_klog test_fb
 	./test_vsprintf
 	./test_ringbuf
 	./test_klog
+	./test_fb
 
 test_vsprintf: tests/test_vsprintf.c $(HOST_LIBK)
 	$(HOST_CC) $(HOST_CFLAGS) -o $@ tests/test_vsprintf.c $(HOST_LIBK)
@@ -117,3 +118,9 @@ test_ringbuf: tests/test_ringbuf.c src/include/kernel/ringbuf.h
 # as an unprivileged process (the real lock executes cli/hlt).
 test_klog: tests/test_klog.c src/kernel/log/klog.c $(HOST_LIBK) tests/mock/kernel/spinlock.h
 	$(HOST_CC) -Itests/mock $(HOST_CFLAGS) -o $@ tests/test_klog.c src/kernel/log/klog.c $(HOST_LIBK)
+
+test_fb: tests/test_fb.c src/kernel/graphics/fb.c src/kernel/graphics/fb_console.c \
+         src/kernel/graphics/font8x16.c src/include/kernel/devices/fb.h
+	$(HOST_CC) -Itests/mock $(HOST_CFLAGS) -o $@ tests/test_fb.c \
+		src/kernel/graphics/fb.c src/kernel/graphics/fb_console.c \
+		src/kernel/graphics/font8x16.c src/kernel/log/klog.c $(HOST_LIBK)

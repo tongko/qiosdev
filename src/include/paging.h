@@ -15,7 +15,10 @@
 #define HHDM_OFFSET 0xFFFF800000000000ULL
 #define KERNEL_OFFSET 0xFFFFFFFF80000000ULL
 
-#define HHDM(a) (HHDM_OFFSET + a)
+// Cast to UINTN before adding: "HHDM_OFFSET + ptr" is pointer arithmetic, so
+// the offset is scaled by sizeof(*ptr) - 4x for a UINT32 * framebuffer pointer.
+// The result is an integer; cast it to the pointer type you need.
+#define HHDM(a) ((UINTN)(HHDM_OFFSET) + (UINTN)(a))
 
 #define ENTRY_MASK 0x1ff
 #define ADDRESS_MASK ~0xfffUL

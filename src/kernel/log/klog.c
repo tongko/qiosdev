@@ -184,6 +184,15 @@ void log_subscribers_poll(void) {
 		}
 	}
 
+	// Batch boundary: every sink has now seen all the bytes that were pending,
+	// so let the ones that buffer internally (the framebuffer console) push
+	// their work out once, instead of flushing per byte.
+	for (sub = _log_subs; sub != NULL; sub = sub->next) {
+		if (sub->active && sub->flush != NULL) {
+			sub->flush(sub);
+		}
+	}
+
 	spinlock_unlock(&_poll_lock);
 }
 
@@ -193,6 +202,12 @@ void log_force_flush(void) {
 	for (sub = _log_subs; sub != NULL; sub = sub->next) {
 		if (sub->active) {
 			log_drain(sub);
+		}
+	}
+
+	for (sub = _log_subs; sub != NULL; sub = sub->next) {
+		if (sub->active && sub->flush != NULL) {
+			sub->flush(sub);
 		}
 	}
 }

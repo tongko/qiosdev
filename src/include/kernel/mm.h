@@ -4,8 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define MAX_ORDER 10
-
 // ====================== Physical page (buddy backend) ======================
 // allocate 2^order contiguous physical page frames
 uintptr_t mm_alloc_pages(uint8_t order);

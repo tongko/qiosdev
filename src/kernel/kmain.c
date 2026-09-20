@@ -6,6 +6,8 @@
 #include <kernel/mm.h>
 #include <kernel/serial.h>
 #include <kernel/tsc.h>
+#include <kernel/devices/device.h>
+#include <kernel/devices/fb.h>
 #include <libk/string.h>
 #include <stdbool.h>
 
@@ -18,7 +20,7 @@ void kmain(bootinfo_t *bi) {
 	// copy bootinfo so we can reclaim bootloader data later
 	memcpy(&_bi, bi, sizeof(bootinfo_t));
 
-	_tsc_start = bi->tsc_start;
+	_tsc_start = bi->tsc_start ? bi->tsc_start : rdtsc();
 	_tsc_hz = bi->tsc_hz;
 
 	// Logging first: everything below this line can be reported, and printk()
@@ -27,12 +29,14 @@ void kmain(bootinfo_t *bi) {
 	serial_log_init();
 
 	printk("qios: kernel entered, tsc = %llu Hz", (unsigned long long)_tsc_hz);
+	printk("qios: bootinfo PML4=0x%lx", bi->pml4_paddr);
+	framebuffer_t *fb = &bi->frame_buff;
 	printk("qios: framebuffer %ux%u stride=%u fmt=%u at %p",
-			 (unsigned)bi->frame_buff.width,
-			 (unsigned)bi->frame_buff.height,
-			 (unsigned)bi->frame_buff.px_per_scanline,
-			 (unsigned)bi->frame_buff.px_format,
-			 (void *)bi->frame_buff.base_addr);
+			 (unsigned)fb->width,
+			 (unsigned)fb->height,
+			 (unsigned)fb->px_per_scanline,
+			 (unsigned)fb->px_format,
+			 (void *)fb->base_addr);
 
 	// Get GDT working first
 	gdt_init();
@@ -42,9 +46,29 @@ void kmain(bootinfo_t *bi) {
 	mm_init();
 	printk("qios: memory subsystem ready, %llu MiB installed", (unsigned long long)(bi->total_installed_ram >> 20));
 
+	// init device root
+	static device_t root;
+	dev_init_root(&root);
+
+	// built-in framebuffer driver (debug console)
+	fb_device_t *fbd = fb_init(fb->base_addr, fb->width, fb->height, fb->px_per_scanline, 32);
 	uint32_t bg_color = COLOR_ARGB(0, 30, 40, 60);
-	paint_background(bi, bg_color);
-	printk("qios: painted %ux%u background", (unsigned)bi->frame_buff.width, (unsigned)bi->frame_buff.height);
+
+	if (fbd != NULL) {
+		dev_add_child(&root, &fbd->base);
+
+		// Paint the background into the shadow buffer, then push it once.
+		fb_clear(fbd, bg_color);
+		fb_present_all(fbd);
+
+		// Attach the screen to the log and replay whatever is still in the
+		// ring, so the boot output logged above appears on screen as well.
+		fb_log_init(fbd, true);
+		printk("qios: framebuffer console ready");
+	} else {
+		paint_background(bi, bg_color);
+		printk("qios: no framebuffer console, painted the background directly");
+	}
 
 	while (true) {
 		__asm__ volatile("hlt");

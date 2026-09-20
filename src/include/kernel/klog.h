@@ -37,9 +37,19 @@ typedef struct log_subscriber log_subscriber_t;
  */
 typedef size_t (*log_sink_fn)(log_subscriber_t *sub, const char *data, size_t len);
 
+/*
+ * Called once after a drain, when every pending byte has already been passed to
+ * write().  This is the batch boundary: a framebuffer sink renders into its
+ * shadow buffer during write() and copies to the screen here, once per batch,
+ * instead of flushing per byte.  Optional - NULL means the sink has nothing to
+ * flush.
+ */
+typedef void (*log_flush_fn)(log_subscriber_t *sub);
+
 struct log_subscriber {
 	const char *name;	 // for debugging
 	log_sink_fn write; // sink, e.g. serial_log_write()
+	log_flush_fn flush; // optional: once per drain, see log_flush_fn
 	void *ctx;			 // sink private data
 	uint64_t pos;		 // absolute position in the log stream
 	uint64_t lost;		 // bytes missed because we fell behind

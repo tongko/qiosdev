@@ -103,7 +103,9 @@ static void merge_alloc(allocated_t arr[], int size) {
 
 	for (i = 0; i < size; i++) {
 		if (arr[i].pstart == 0 && arr[i].pend == 0) {
-			Print(u"index %d is zero.\r\n", i);
+#if defined(EFI_DEBUG) && defined(EFI_DEBUG_BI)
+			Print(u"[DEBUG] index %d is zero.\r\n", i);
+#endif
 			continue;
 		}
 
