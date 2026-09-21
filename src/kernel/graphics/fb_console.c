@@ -103,7 +103,7 @@ void fb_console_write(fb_device_t *fb, const char *data, size_t len) {
 
 // ---- klog sink ----
 
-static log_subscriber_t fb_log_sub;
+static log_subscriber_t _fb_log_sub;
 
 size_t fb_log_write(log_subscriber_t *sub, const char *data, size_t len) {
 	fb_console_write((fb_device_t *)sub->ctx, data, len);
@@ -115,13 +115,13 @@ void fb_log_flush(log_subscriber_t *sub) {
 }
 
 void fb_log_init(fb_device_t *fb, bool replay_from_start) {
-	fb_log_sub.flush = fb_log_flush;
-	log_subscriber_register(&fb_log_sub, "fbcon", fb_log_write, fb);
+	_fb_log_sub.flush = fb_log_flush;
+	log_subscriber_register(&_fb_log_sub, "fbcon", fb_log_write, fb);
 
 	if (replay_from_start) {
 		// Point the sink back at the oldest byte still in the ring so the boot
 		// output logged before the screen existed shows up too.
-		fb_log_sub.pos = ringbuf_oldest(log_ring());
+		_fb_log_sub.pos = ringbuf_oldest(log_ring());
 		log_subscribers_poll();
 	}
 }

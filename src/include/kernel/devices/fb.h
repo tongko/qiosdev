@@ -19,6 +19,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define COLOR_ARGB(a, r, g, b) (((uint32_t)(a) << 24) | ((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b))
+
 typedef struct fb_device fb_device_t;
 
 // Half-open pixel rectangle [x0, x1) x [y0, y1).  Empty when x0 >= x1.
@@ -43,20 +45,20 @@ typedef struct fb_ops {
 struct fb_device {
 	device_t base;
 
-	uint32_t *vaddr;   // hardware framebuffer (from bootinfo)
-	uint32_t *back;    // shadow buffer, width-strided: draw here
-	uint32_t width;    // pixels
-	uint32_t height;   // pixels
+	uint32_t *vaddr;	  // hardware framebuffer (from bootinfo)
+	uint32_t *back;	  // shadow buffer, width-strided: draw here
+	uint32_t width;	  // pixels
+	uint32_t height;	  // pixels
 	uint32_t stride_px; // pixels per hardware scanline (>= width)
-	uint32_t bpp;       // bits per pixel, must be 32
-	uint32_t format;    // EFI pixel format (1 = BlueGreenRedReserved)
+	uint32_t bpp;		  // bits per pixel, must be 32
+	uint32_t format;	  // EFI pixel format (1 = BlueGreenRedReserved)
 
 	fb_rect_t dirty; // pixels changed since the last present
 
 	// text console state (fb_console.c)
-	uint32_t cols;      // width  / FONT8X16_W
-	uint32_t rows;      // height / FONT8X16_H
-	uint32_t cursor_x;  // in character cells
+	uint32_t cols;		 // width  / FONT8X16_W
+	uint32_t rows;		 // height / FONT8X16_H
+	uint32_t cursor_x; // in character cells
 	uint32_t cursor_y;
 	uint32_t fg;
 	uint32_t bg;
@@ -70,7 +72,7 @@ fb_device_t *fb_init(void *fb_vaddr, uint32_t w, uint32_t h, uint32_t stride_px,
 
 // ==== presentation ====
 void fb_mark_dirty(fb_device_t *fb, int32_t x, int32_t y, int32_t w, int32_t h);
-void fb_present(fb_device_t *fb);     // flush fb->dirty, then clear it
+void fb_present(fb_device_t *fb);	  // flush fb->dirty, then clear it
 void fb_present_all(fb_device_t *fb); // force a whole-screen flush
 
 // ==== software rasterizers (all draw into fb->back) ====

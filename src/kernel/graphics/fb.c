@@ -43,11 +43,12 @@ static void gop_present(fb_device_t *fb, const fb_rect_t *dirty) {
 
 	for (int32_t y = y0; y < y1; y++) {
 		memcpy(&fb->vaddr[(size_t)y * fb->stride_px + (size_t)x0],
-					 &fb->back[(size_t)y * fb->width + (size_t)x0], (size_t)(x1 - x0) * sizeof(uint32_t));
+				 &fb->back[(size_t)y * fb->width + (size_t)x0],
+				 (size_t)(x1 - x0) * sizeof(uint32_t));
 	}
 }
 
-static const fb_ops_t gop_ops = {
+static const fb_ops_t _gop_ops = {
 	.present = gop_present,
 	.scroll = NULL, // software scroll of the shadow buffer
 };
@@ -56,8 +57,12 @@ static const fb_ops_t gop_ops = {
 
 fb_device_t *fb_init(void *fb_vaddr, uint32_t w, uint32_t h, uint32_t stride_px, uint32_t bpp) {
 	if (fb_vaddr == NULL || w == 0 || h == 0 || bpp != 32) {
-		printk("fb: invalid arguments (%p %llux%llu stride=%llu bpp=%llu)", fb_vaddr, (unsigned long long)w,
-					 (unsigned long long)h, (unsigned long long)stride_px, (unsigned long long)bpp);
+		printk("fb: invalid arguments (%p %llux%llu stride=%llu bpp=%llu)",
+				 fb_vaddr,
+				 (unsigned long long)w,
+				 (unsigned long long)h,
+				 (unsigned long long)stride_px,
+				 (unsigned long long)bpp);
 		return NULL;
 	}
 	if (stride_px < w) {
@@ -93,15 +98,20 @@ fb_device_t *fb_init(void *fb_vaddr, uint32_t w, uint32_t h, uint32_t stride_px,
 	fb->height = h;
 	fb->stride_px = stride_px;
 	fb->bpp = bpp;
-	fb->ops = &gop_ops;
+	fb->ops = &_gop_ops;
 	fb_rect_clear(fb);
 
 	// Console geometry + a first wipe of the shadow buffer.
-	fb_console_init(fb, 0x00FFFFFFu, 0x00000000u);
+	fb_console_init(fb, COLOR_ARGB(0, 150, 150, 150), COLOR_ARGB(0, 30, 40, 50));
 
 	printk("fb: %llux%llu, stride %llu px, shadow at 0x%llx (%llu KiB), %llux%llu text cells",
-				 (unsigned long long)w, (unsigned long long)h, (unsigned long long)stride_px, (unsigned long long)pa,
-				 (unsigned long long)(bytes >> 10), (unsigned long long)fb->cols, (unsigned long long)fb->rows);
+			 (unsigned long long)w,
+			 (unsigned long long)h,
+			 (unsigned long long)stride_px,
+			 (unsigned long long)pa,
+			 (unsigned long long)(bytes >> 10),
+			 (unsigned long long)fb->cols,
+			 (unsigned long long)fb->rows);
 	return fb;
 }
 

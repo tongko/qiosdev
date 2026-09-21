@@ -52,8 +52,8 @@ EFI_STATUS bootinfo_init(bootinfo_t *out_bi) {
 
 		// Will will default the resolution to 1024x768
 		//	TODO: set fallback if not found
-		if (info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor && info->HorizontalResolution == 1024 &&
-			 info->VerticalResolution == 768) {
+		if (info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor && info->HorizontalResolution == 1920 &&
+			 info->VerticalResolution == 1080) {
 			// Activate graphics mode
 			Print(u"[bootinfo_init] Set graphics mode to index %d\r\n", i);
 			gop->SetMode(gop, i);

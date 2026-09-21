@@ -174,8 +174,35 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 
 		// This is the address the kernel uses.
 		bi.frame_buff.base_addr = (UINT32 *)(UINTN)HHDM(fb_pa);
-		Print(u"[efi_main] Framebuffer pa 0x%lx -> HHDM 0x%lx (%lu bytes, uncached).\r\n", fb_pa,
-					(UINTN)HHDM(fb_pa), bi.frame_buff.size);
+		Print(u"[efi_main] Framebuffer pa 0x%lx -> HHDM 0x%lx (%lu bytes, uncached).\r\n",
+				fb_pa,
+				(UINTN)HHDM(fb_pa),
+				bi.frame_buff.size);
+
+		// Try to load an image from EFI partition, for testing purpose - to be delted
+		hfile = NULL;
+		status = open_file(u"\\EFI\\BOOT\\IMAGES\\Crow-Panic-1080p.bmp", &hfile);
+		if (EFI_ERROR(status)) {
+			if (hfile) {
+				hfile->Close(hfile);
+			}
+			Print(u"%E❌ [efi_main] Logo not found. %r%N\r\n", status);
+			return status;
+		}
+
+		VOID *logo_buff = 0;
+		UINTN logo_sz = 0;
+		status = load_logo(hfile, &logo_buff, &logo_sz);
+		if (EFI_ERROR(status)) {
+			if (hfile) {
+				hfile->Close(hfile);
+			}
+			Print(u"%E❌ [efi_main] Failed to open logo. %r%N\r\n", status);
+			return status;
+		}
+
+		bi.logo_bmp = (EFI_VIRTUAL_ADDRESS)HHDM(logo_buff);
+		bi.logo_sz = logo_sz;
 	}
 
 	EFI_PHYSICAL_ADDRESS stack_pa = alloc_pages(AllocateAnyPages, EfiLoaderData, STACK_PAGE_SIZE);

@@ -8,10 +8,9 @@
 #include <kernel/tsc.h>
 #include <kernel/devices/device.h>
 #include <kernel/devices/fb.h>
+#include <kernel/bmp.h>
 #include <libk/string.h>
 #include <stdbool.h>
-
-#define COLOR_ARGB(a, r, g, b) (((uint32_t)(a) << 24) | ((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b))
 
 void kmain(bootinfo_t *bi) {
 	// stop interrup
@@ -52,7 +51,7 @@ void kmain(bootinfo_t *bi) {
 
 	// built-in framebuffer driver (debug console)
 	fb_device_t *fbd = fb_init(fb->base_addr, fb->width, fb->height, fb->px_per_scanline, 32);
-	uint32_t bg_color = COLOR_ARGB(0, 30, 40, 60);
+	uint32_t bg_color = COLOR_ARGB(0, 30, 40, 50);
 
 	if (fbd != NULL) {
 		dev_add_child(&root, &fbd->base);
@@ -69,6 +68,9 @@ void kmain(bootinfo_t *bi) {
 		paint_background(bi, bg_color);
 		printk("qios: no framebuffer console, painted the background directly");
 	}
+
+	//	draw bmp at (0, 0)
+	draw_bmp(fbd, (uint8_t *)bi->logo_bmp, 0, 0);
 
 	while (true) {
 		__asm__ volatile("hlt");

@@ -49,6 +49,8 @@ all: $(GNU_OUT_A) $(EFI_IMG) $(KERNEL) $(LIBK)
 	mcopy -i $(ESP_IMG)@@1M $(EFI_IMG) ::/EFI/BOOT
 	mmd -i $(ESP_IMG)@@1M ::/EFI/BOOT/DRIVERS
 	mcopy -i $(ESP_IMG)@@1M $(DRIVERS_DIR)/* ::/EFI/BOOT/DRIVERS
+	mmd -i $(ESP_IMG)@@1M ::/EFI/BOOT/IMAGES
+	mcopy -i $(ESP_IMG)@@1M $(ROOT_DIR)/resources/images/* ::/EFI/BOOT/IMAGES
 	parted -s $(ESP_IMG) mkpart "root" ext4 100MiB 800MiB
 	dd if=/dev/zero of=build/ext4.raw bs=512K count=1400
 	mkfs.ext4 -F -F -L "ROOT" build/ext4.raw

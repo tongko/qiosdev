@@ -36,6 +36,8 @@ typedef struct {
 	EFI_PHYSICAL_ADDRESS pml4_paddr;
 	EFI_PHYSICAL_ADDRESS kernel_phys_start;
 	EFI_PHYSICAL_ADDRESS kstack_base;
+	EFI_VIRTUAL_ADDRESS logo_bmp;
+	UINTN logo_sz;
 	allocated_t alloc_pages[20];
 } bootinfo_t;
 

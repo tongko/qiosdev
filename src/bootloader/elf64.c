@@ -6,6 +6,7 @@
 #include <efilib.h>
 
 static EFI_GUID _fs_protocol_guid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
+static EFI_GUID _file_info_guid = EFI_FILE_INFO_ID;
 
 static UINT64 elfflags_to_paging_attr(UINT32 p_flags) {
 	// Every valid segment must at least be marked as Present
@@ -233,6 +234,67 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 	// Free metadata trackers and extract runtime execution address pointer
 	FreePool(phdrs);
 	*out_entry = ehdr.e_entry;
+
+	return EFI_SUCCESS;
+}
+
+EFI_STATUS load_logo(IN const EFI_FILE_HANDLE hfile, OUT VOID **out_buf, OUT UINTN *out_sz) {
+	if (!hfile) {
+		return EFI_INVALID_PARAMETER;
+	}
+
+	EFI_STATUS status;
+	UINTN info_buf_sz = 0;
+	EFI_FILE_INFO *file_info = NULL;
+	UINTN file_sz;
+	UINTN num_pg;
+	VOID *buffer = NULL;
+	UINTN read_sz;
+
+	// Query required size of EFI_FILE_INFO
+	status = hfile->GetInfo(hfile, &_file_info_guid, &info_buf_sz, NULL);
+	if (status != EFI_BUFFER_TOO_SMALL) {
+		return status;
+	}
+
+	// Allocate pool for file info struct
+	file_info = AllocatePool(info_buf_sz);
+	if (!file_info) {
+		return EFI_OUT_OF_RESOURCES;
+	}
+
+	// Get actual file metadata
+	status = hfile->GetInfo(hfile, &_file_info_guid, &info_buf_sz, file_info);
+	if (EFI_ERROR(status)) {
+		return status;
+	}
+
+	file_sz = file_info->FileSize;
+	FreePool(file_info);
+
+	//	Set position to start of file
+	status = hfile->SetPosition(hfile, 0);
+	if (EFI_ERROR(status)) {
+		return status;
+	}
+
+	num_pg = (file_sz + EFI_PAGE_SIZE - 1) / EFI_PAGE_SIZE;
+	// Allocate buffer for BMP raw bytes
+	buffer = (VOID *)alloc_pages(AllocateAnyPages, EfiBootServicesData, num_pg);
+	if (!buffer) {
+		return EFI_OUT_OF_RESOURCES;
+	}
+
+	// Read entire file
+	read_sz = file_sz;
+	status = hfile->Read(hfile, &read_sz, buffer);
+	if (EFI_ERROR(status) || read_sz != (UINTN)file_sz) {
+		FreePool(buffer);
+		return EFI_ABORTED;
+	}
+
+	*out_buf = buffer;
+	*out_sz = read_sz;
 
 	return EFI_SUCCESS;
 }
