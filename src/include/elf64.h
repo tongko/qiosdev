@@ -41,4 +41,4 @@ EFI_STATUS open_file(IN const CHAR16 *fname, OUT EFI_FILE_PROTOCOL **out_file);
 
 EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry);
 
-EFI_STATUS load_logo(IN const EFI_FILE_HANDLE hfile, VOID **out_buf, OUT UINTN *out_sz);
+EFI_STATUS load_bmp(IN const EFI_FILE_HANDLE hfile, VOID **out_buf, OUT UINTN *out_sz);

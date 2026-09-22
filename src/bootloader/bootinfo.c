@@ -50,7 +50,7 @@ EFI_STATUS bootinfo_init(bootinfo_t *out_bi) {
 		Print(u"PixelsPerScanLine: %d\r\n", info->PixelsPerScanLine);
 #endif
 
-		// Will will default the resolution to 1024x768
+		// Will will default the resolution to 1920x1080
 		//	TODO: set fallback if not found
 		if (info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor && info->HorizontalResolution == 1920 &&
 			 info->VerticalResolution == 1080) {

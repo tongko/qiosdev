@@ -99,8 +99,7 @@ typedef struct {
 	paddr_t pml4_paddr;
 	paddr_t kernel_phys_start;
 	paddr_t kstack_base;
-	vaddr_t logo_bmp;
-	size_t logo_sz;
+	vaddr_t logo_bmp[10];
 	allocated_t alloc_pages[20];
 } bootinfo_t;
 

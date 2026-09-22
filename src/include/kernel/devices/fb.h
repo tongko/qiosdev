@@ -14,11 +14,17 @@
 // fb_log_flush(), which printk() reaches once per line.
 
 #include <kernel/devices/device.h>
+#include <kernel/global.h>
 #include <kernel/klog.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+/*
+ * Pixel value for the format the bootloader handed us: format 1 is
+ * BlueGreenRedReserved8BitPerColor, so the bytes in memory are B,G,R,A, which
+ * as a little-endian uint32_t is 0xAARRGGBB.
+ */
 #define COLOR_ARGB(a, r, g, b) (((uint32_t)(a) << 24) | ((uint32_t)(r) << 16) | ((uint32_t)(g) << 8) | (uint32_t)(b))
 
 typedef struct fb_device fb_device_t;
@@ -94,3 +100,14 @@ void fb_log_flush(log_subscriber_t *sub);
 // Register "fbcon" as a log sink.  replay_from_start replays the boot log that
 // is still in the ring, instead of only showing lines logged from now on.
 void fb_log_init(fb_device_t *fb, bool replay_from_start);
+
+// ==== panic path (callable from an exception handler) ====
+//
+// The console owns the device pointer, so the interrupt layer never has to
+// carry one around: it calls fb_panic_screen() and this module finds its own
+// singleton.  No locks, no allocation; a no-op if the console never came up or
+// has already been declared dead.
+void fb_panic_screen(const char *title, const char *detail);
+// Called when a fault happened while the console was being flushed: stop
+// touching it, the screen is not trustworthy any more.
+void fb_console_mark_dead(void);

@@ -51,7 +51,7 @@ void kmain(bootinfo_t *bi) {
 
 	// built-in framebuffer driver (debug console)
 	fb_device_t *fbd = fb_init(fb->base_addr, fb->width, fb->height, fb->px_per_scanline, 32);
-	uint32_t bg_color = COLOR_ARGB(0, 30, 40, 50);
+	uint32_t bg_color = COLOR_ARGB(0xFF, 0, 0, 0);
 
 	if (fbd != NULL) {
 		dev_add_child(&root, &fbd->base);
@@ -69,8 +69,9 @@ void kmain(bootinfo_t *bi) {
 		printk("qios: no framebuffer console, painted the background directly");
 	}
 
-	//	draw bmp at (0, 0)
-	draw_bmp(fbd, (uint8_t *)bi->logo_bmp, 0, 0);
+	// volatile uint64_t *bad_ptr = (volatile uint64_t *)0xdeadbeef0000;
+	// uint64_t val = *bad_ptr;
+	// mm_free_page(val);
 
 	while (true) {
 		__asm__ volatile("hlt");

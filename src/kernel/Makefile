@@ -18,6 +18,7 @@ CFLAGS = -ffreestanding \
           -fno-pie -fno-pic \
           -Wall -Wextra -Werror \
           -std=c11 -O2 -g \
+					-MMD -MP \
 					-I$(SRC_DIR)/include \
 					-I$(GNU_EFI_DIR)/inc
 ASMFLAGS = -ffreestanding -m64 -g
@@ -47,6 +48,12 @@ $(BUILD_DIR)/kernel/%.o: $(SRC_DIR)/kernel/%.c | $(OBJS_DIR)
 
 $(OBJS_DIR):
 	mkdir -p $(OBJS_DIR)
+
+# Header dependencies written by -MMD.  Without these, editing a header (for
+# instance regenerating font8x16.h with a different cell size) leaves every
+# object that includes it stale, and the console keeps the old geometry
+# compiled in while the font data has a different shape.
+-include $(OBJS:.o=.d)
 
 print:
 	@echo "Kernel build configuration:"

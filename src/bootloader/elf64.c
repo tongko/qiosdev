@@ -116,6 +116,8 @@ EFI_STATUS open_file(IN const CHAR16 *fname, OUT EFI_FILE_PROTOCOL **out_file) {
 	return EFI_SUCCESS;
 }
 
+#define LOAD_CHUNK_SIZE (32 * 1024)
+
 /*****************************************************************************
  * function: load_elf
  * Load the file handle to memory based on ELF standard.
@@ -193,12 +195,29 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 			return status;
 		}
 
-		UINTN read_sz = hdr->p_filesz;
-		status = hfile->Read(hfile, &read_sz, (void *)seg_dest);
-		if (EFI_ERROR(status)) {
-			FreePool(phdrs);
-			Print(u"%E❌ Can't read segment %d: %r%N\r\n", i, status);
-			return status;
+		// rEFInd's ext4 driver only serves a limited window: one big read of a
+		// segment larger than ~128 KiB fails with EFI_VOLUME_CORRUPTED.  Pull
+		// the segment in chunks; it also keeps this working on any block-based
+		// filesystem driver.
+		UINTN left = hdr->p_filesz;
+		UINT8 *dst = (UINT8 *)seg_dest;
+		while (left > 0) {
+			UINTN chunk = (left < LOAD_CHUNK_SIZE) ? left : LOAD_CHUNK_SIZE;
+
+			status = hfile->Read(hfile, &chunk, dst);
+			if (EFI_ERROR(status) || chunk == 0) {
+				FreePool(phdrs);
+				Print(u"%E❌ Can't read segment %d at file offset 0x%lx "
+						u"(%lu of %lu bytes left): %r%N\r\n",
+						i,
+						(UINT64)(hdr->p_offset + (hdr->p_filesz - left)),
+						(UINT64)chunk,
+						(UINT64)left,
+						status);
+				return EFI_ERROR(status) ? status : EFI_VOLUME_CORRUPTED;
+			}
+			dst += chunk;
+			left -= chunk;
 		}
 
 		// Zero-init any remaining padding space required by the segment size (e.g.
@@ -238,7 +257,7 @@ EFI_STATUS load_elf(IN const EFI_FILE_HANDLE hfile, OUT UINTN *out_entry) {
 	return EFI_SUCCESS;
 }
 
-EFI_STATUS load_logo(IN const EFI_FILE_HANDLE hfile, OUT VOID **out_buf, OUT UINTN *out_sz) {
+EFI_STATUS load_bmp(IN const EFI_FILE_HANDLE hfile, OUT VOID **out_buf, OUT UINTN *out_sz) {
 	if (!hfile) {
 		return EFI_INVALID_PARAMETER;
 	}

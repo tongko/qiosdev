@@ -124,7 +124,15 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	}
 
 	EFI_FILE_HANDLE hfile = NULL;
-	status = open_file(u"\\sys\\qios.elf", &hfile);
+
+	// The kernel is served from the FAT ESP first: that goes through the
+	// firmware's own FAT driver.  /sys/qios.elf on the ext4 root stays as a
+	// fallback, but rEFInd's ext4 driver chokes on reads past ~128 KiB.
+	status = open_file(u"\\EFI\\BOOT\\qios.elf", &hfile);
+	if (EFI_ERROR(status)) {
+		hfile = NULL;
+		status = open_file(u"\\sys\\qios.elf", &hfile);
+	}
 	if (EFI_ERROR(status)) {
 		if (hfile) {
 			hfile->Close(hfile);
@@ -181,7 +189,7 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 
 		// Try to load an image from EFI partition, for testing purpose - to be delted
 		hfile = NULL;
-		status = open_file(u"\\EFI\\BOOT\\IMAGES\\Crow-Panic-1080p.bmp", &hfile);
+		status = open_file(u"\\EFI\\BOOT\\IMAGES\\panic-crow.bmp", &hfile);
 		if (EFI_ERROR(status)) {
 			if (hfile) {
 				hfile->Close(hfile);
@@ -192,17 +200,45 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 
 		VOID *logo_buff = 0;
 		UINTN logo_sz = 0;
-		status = load_logo(hfile, &logo_buff, &logo_sz);
+		status = load_bmp(hfile, &logo_buff, &logo_sz);
+		hfile->Close(hfile);
+		if (EFI_ERROR(status)) {
+			Print(u"%E❌ [efi_main] Failed to open logo. %r%N\r\n", status);
+			return status;
+		}
+		bi.logo_bmp[0] = (EFI_VIRTUAL_ADDRESS)HHDM(logo_buff);
+
+		status = open_file(u"\\EFI\\BOOT\\IMAGES\\panic-title.bmp", &hfile);
 		if (EFI_ERROR(status)) {
 			if (hfile) {
 				hfile->Close(hfile);
 			}
+			Print(u"%E❌ [efi_main] Logo not found. %r%N\r\n", status);
+			return status;
+		}
+		status = load_bmp(hfile, &logo_buff, &logo_sz);
+		hfile->Close(hfile);
+		if (EFI_ERROR(status)) {
 			Print(u"%E❌ [efi_main] Failed to open logo. %r%N\r\n", status);
 			return status;
 		}
+		bi.logo_bmp[1] = (EFI_VIRTUAL_ADDRESS)HHDM(logo_buff);
 
-		bi.logo_bmp = (EFI_VIRTUAL_ADDRESS)HHDM(logo_buff);
-		bi.logo_sz = logo_sz;
+		status = open_file(u"\\EFI\\BOOT\\IMAGES\\panic-text.bmp", &hfile);
+		if (EFI_ERROR(status)) {
+			if (hfile) {
+				hfile->Close(hfile);
+			}
+			Print(u"%E❌ [efi_main] Logo not found. %r%N\r\n", status);
+			return status;
+		}
+		status = load_bmp(hfile, &logo_buff, &logo_sz);
+		hfile->Close(hfile);
+		if (EFI_ERROR(status)) {
+			Print(u"%E❌ [efi_main] Failed to open logo. %r%N\r\n", status);
+			return status;
+		}
+		bi.logo_bmp[2] = (EFI_VIRTUAL_ADDRESS)HHDM(logo_buff);
 	}
 
 	EFI_PHYSICAL_ADDRESS stack_pa = alloc_pages(AllocateAnyPages, EfiLoaderData, STACK_PAGE_SIZE);

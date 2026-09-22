@@ -102,7 +102,7 @@ fb_device_t *fb_init(void *fb_vaddr, uint32_t w, uint32_t h, uint32_t stride_px,
 	fb_rect_clear(fb);
 
 	// Console geometry + a first wipe of the shadow buffer.
-	fb_console_init(fb, COLOR_ARGB(0, 150, 150, 150), COLOR_ARGB(0, 30, 40, 50));
+	fb_console_init(fb, COLOR_ARGB(0, 100, 100, 100), COLOR_ARGB(0, 0, 0, 0));
 
 	printk("fb: %llux%llu, stride %llu px, shadow at 0x%llx (%llu KiB), %llux%llu text cells",
 			 (unsigned long long)w,

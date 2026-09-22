@@ -29,7 +29,7 @@ export GNUEFI_OUT_DIR
 GNU_OUT_A = $(GNUEFI_OUT_DIR)/libefi.a
 export GNU_OUT_A
 
-.PHONY: all clean print tests
+.PHONY: all clean print tests font
 
 all: $(GNU_OUT_A) $(EFI_IMG) $(KERNEL) $(LIBK)
 	# 1. Create a clean 64MB file filled with zeroes
@@ -51,6 +51,7 @@ all: $(GNU_OUT_A) $(EFI_IMG) $(KERNEL) $(LIBK)
 	mcopy -i $(ESP_IMG)@@1M $(DRIVERS_DIR)/* ::/EFI/BOOT/DRIVERS
 	mmd -i $(ESP_IMG)@@1M ::/EFI/BOOT/IMAGES
 	mcopy -i $(ESP_IMG)@@1M $(ROOT_DIR)/resources/images/* ::/EFI/BOOT/IMAGES
+	mcopy -i $(ESP_IMG)@@1M $(KERNEL) ::/EFI/BOOT
 	parted -s $(ESP_IMG) mkpart "root" ext4 100MiB 800MiB
 	dd if=/dev/zero of=build/ext4.raw bs=512K count=1400
 	mkfs.ext4 -F -F -L "ROOT" build/ext4.raw
@@ -62,15 +63,26 @@ all: $(GNU_OUT_A) $(EFI_IMG) $(KERNEL) $(LIBK)
 $(GNU_OUT_A): | $(GNUEFI_OUT_DIR)
 	$(MAKE) -C $(GNU_EFI_DIR) ARCH=x86_64 CROSS_COMPILE=x86_64-w64-mingw32-
 
-$(EFI_IMG):
+# Sources have to be prerequisites: without them make never rebuilds the
+# bootloader after an edit and the ESP silently keeps the old BOOTX64.EFI.
+STUB_SRCS = $(wildcard $(STUB_DIR)/*.c) $(wildcard $(STUB_DIR)/*.s) \
+	$(wildcard $(SRC_DIR)/include/*.h)
+LIBK_SRCS = $(shell find $(LIBK_DIR) -name '*.c' -o -name '*.s')
+
+$(EFI_IMG): $(STUB_SRCS) | $(GNU_OUT_A)
 	git submodule init
 	git submodule update
 	$(MAKE) -C $(STUB_DIR)
 
-$(LIBK):
+$(LIBK): $(LIBK_SRCS)
 	$(MAKE) -C $(LIBK_DIR)
 
-$(KERNEL): $(LIBK)
+# Same trap as the bootloader: without the sources as prerequisites, make sees
+# an up-to-date qios.elf and never invokes the kernel Makefile after an edit.
+KERNEL_SRCS = $(shell find $(KERNEL_DIR) -name '*.c' -o -name '*.s') \
+	$(shell find $(SRC_DIR)/include -name '*.h')
+
+$(KERNEL): $(LIBK) $(KERNEL_SRCS)
 	$(MAKE) -C $(KERNEL_DIR)
 
 $(GNUEFI_OUT_DIR):
@@ -126,3 +138,8 @@ test_fb: tests/test_fb.c src/kernel/graphics/fb.c src/kernel/graphics/fb_console
 	$(HOST_CC) -Itests/mock $(HOST_CFLAGS) -o $@ tests/test_fb.c \
 		src/kernel/graphics/fb.c src/kernel/graphics/fb_console.c \
 		src/kernel/graphics/font8x16.c src/kernel/log/klog.c $(HOST_LIBK)
+
+font:
+	python3 tools/genfont.py resources/fonts/JetBrainsMonoNerdFont-Regular.ttf \
+        src/kernel/graphics/font8x16.c src/include/kernel/devices/font8x16.h \
+        --size 8x16 --coverage --preview font.png
