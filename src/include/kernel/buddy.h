@@ -4,7 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
+#endif
 #define MAX_ORDER 11
 #define PAGE_SHIFT 12 // log2(4096)
 

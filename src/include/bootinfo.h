@@ -38,6 +38,9 @@ typedef struct {
 	EFI_PHYSICAL_ADDRESS kstack_base;
 	EFI_VIRTUAL_ADDRESS logo_bmp[10];
 	allocated_t alloc_pages[20];
+	// Physical address of the ACPI RSDP, captured before ExitBootServices:
+	// after it, the EFI System Table that points at it is gone.
+	EFI_PHYSICAL_ADDRESS acpi_rsdp_pa;
 } bootinfo_t;
 
 EFI_STATUS bootinfo_init(bootinfo_t *bi);

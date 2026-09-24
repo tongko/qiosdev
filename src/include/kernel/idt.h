@@ -1,5 +1,6 @@
 #pragma once
 #include <kernel/global.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #define IDT_VECTORS 256
@@ -46,3 +47,9 @@ void irq_unregister(uint8_t vector);
 
 void c_interrupt_handler(interrupt_frame_t *frame);
 void idt_init(void);
+
+// Remap the 8259 pair to IRQ_VECTOR_MIN..+15 and mask every line.
+void pic_remap(void);
+
+// Mask or unmask one 8259 line (0..15).
+void pic_set_mask(uint8_t irq, bool masked);

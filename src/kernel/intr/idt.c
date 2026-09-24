@@ -7,6 +7,7 @@
 #include <libk/stdio.h>
 #include <libk/string.h>
 #include <stdint.h>
+#include <kernel/apic.h>
 
 // 8259 PIC.  Its lines are masked in idt_init() until a driver remaps the PIC
 // to vectors 0x20..0x2F and unmasks the line it cares about.
@@ -184,9 +185,50 @@ void c_interrupt_handler(interrupt_frame_t *f) {
 	// EOI lives in the LAPIC, whose MSR window needs x2APIC and whose MMIO
 	// window is not mapped yet.  The source therefore keeps firing until a
 	// driver masks it - which is what the vector in the report above is for.
-	if (f->vector <= IRQ_VECTOR_MAX) {
+	// Acknowledge both controllers.  An EOI to one that did not raise this
+	// interrupt is harmless, and it means we do not have to track which side
+	// delivered it - which matters because some machines wire legacy ISA lines
+	// to the 8259 and the PCI ones to the I/O APIC.
+	if (apic_ready()) {
+		apic_eoi();
+	}
+	if (f->vector >= IRQ_VECTOR_MIN && f->vector <= IRQ_VECTOR_MAX) {
 		pic_eoi((uint8_t)f->vector);
 	}
+}
+
+/*
+ * The 8259 pair, remapped so its IRQs land on 0x20..0x2F instead of colliding
+ * with exceptions 8..15.  Everything ends up masked: a driver unmasks exactly
+ * the line it owns.
+ */
+void pic_remap(void) {
+	outb(PIC1_CMD, 0x11); // ICW1: init, ICW4 follows
+	io_wait();
+	outb(PIC2_CMD, 0x11);
+	io_wait();
+	outb(PIC1_DATA, IRQ_VECTOR_MIN); // ICW2: master -> 0x20
+	io_wait();
+	outb(PIC2_DATA, IRQ_VECTOR_MIN + 8); // ICW2: slave -> 0x28
+	io_wait();
+	outb(PIC1_DATA, 0x04); // ICW3: slave is on IRQ2
+	io_wait();
+	outb(PIC2_DATA, 0x02); // ICW3: cascade identity
+	io_wait();
+	outb(PIC1_DATA, 0x01); // ICW4: 8086 mode
+	io_wait();
+	outb(PIC2_DATA, 0x01);
+	io_wait();
+	outb(PIC1_DATA, 0xFF); // mask everything
+	outb(PIC2_DATA, 0xFF);
+}
+
+void pic_set_mask(uint8_t irq, bool masked) {
+	uint16_t port = irq < 8 ? PIC1_DATA : PIC2_DATA;
+	uint8_t bit = (uint8_t)(1u << (irq & 7u));
+	uint8_t value = inb(port);
+
+	outb(port, masked ? (uint8_t)(value | bit) : (uint8_t)(value & (uint8_t)~bit));
 }
 
 void idt_init(void) {
@@ -198,11 +240,7 @@ void idt_init(void) {
 		set_idt_gate(v, (uint64_t)_exception_stub_table[v], 0x8E); // 0x8E: present, ring 0, 64-bit interrupt gate
 	}
 
-	// Mask every PIC line.  Until the PIC is remapped to 0x20..0x2F an unmasked
-	// IRQ would arrive on vector 8..15 and be taken for an exception.  A driver
-	// remaps the PIC and unmasks its own line when it is ready for interrupts.
-	outb(PIC1_DATA, 0xFF);
-	outb(PIC2_DATA, 0xFF);
+	pic_remap(); // to 0x20..0x2F, every line masked
 
 	_idt_ptr.limit = (sizeof(idt_entry_t) * IDT_VECTORS) - 1; // the limit is size - 1
 	_idt_ptr.base = (uint64_t)&_idt;

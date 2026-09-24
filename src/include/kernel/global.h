@@ -101,6 +101,9 @@ typedef struct {
 	paddr_t kstack_base;
 	vaddr_t logo_bmp[10];
 	allocated_t alloc_pages[20];
+	// Same offset as bootinfo_t in bootinfo.h - the kernel reads the RSDP
+	// through the HHDM, so this stays a physical address.
+	paddr_t acpi_rsdp_pa;
 } bootinfo_t;
 
 // Define our GDT with 5 entries

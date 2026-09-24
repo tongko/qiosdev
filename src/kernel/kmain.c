@@ -6,11 +6,15 @@
 #include <kernel/mm.h>
 #include <kernel/serial.h>
 #include <kernel/tsc.h>
+#include <kernel/acpi.h>
+#include <kernel/apic.h>
 #include <kernel/devices/device.h>
+#include <kernel/devices/kbd.h>
 #include <kernel/devices/fb.h>
 #include <kernel/bmp.h>
 #include <libk/string.h>
 #include <stdbool.h>
+#include <kernel/io.h>
 
 void kmain(bootinfo_t *bi) {
 	// stop interrup
@@ -69,11 +73,57 @@ void kmain(bootinfo_t *bi) {
 		printk("qios: no framebuffer console, painted the background directly");
 	}
 
-	// volatile uint64_t *bad_ptr = (volatile uint64_t *)0xdeadbeef0000;
-	// uint64_t val = *bad_ptr;
-	// mm_free_page(val);
+	// ACPI: table walk + MADT parse.  After the console so the dump lands on
+	// screen and in the log ring, before anything that needs the controllers.
+	acpi_init();
+
+	// Take over the interrupt controllers the MADT described: enable the local
+	// APIC, mask every I/O APIC line.  Drivers unmask their own line.
+	apic_init();
+	kbd_init();
+
+	// A tick proves the LAPIC -> IDT -> dispatcher path end to end, and it is
+	// what lets the idle loop wake up (and therefore poll the keyboard).
+	apic_timer_start(100);
+
+	{
+		uint64_t flags;
+
+		__asm__ volatile("pushfq; popq %0" : "=r"(flags));
+		printk("qios: entering idle, interrupts %s",
+					 (flags & (1ull << 9)) ? "enabled (IF=1)" : "DISABLED (IF=0)");
+	}
+
+	uint64_t ticks_seen = 0;
 
 	while (true) {
+		char key;
+
+		if (ticks_seen == 0 && apic_timer_ticks() > 0) {
+			ticks_seen = apic_timer_ticks();
+			printk("qios: first timer tick after %llu, interrupts are being delivered",
+						 (unsigned long long)ticks_seen);
+		}
+
+		// Rendering happens here, not in the ISR: the keyboard queue is the
+		// only thing the interrupt handler touches.
+		bool echoed = false;
+
+		while (kbd_getchar(&key)) {
+			if (fbd != NULL) {
+				// fb_console_putc only draws into the shadow buffer, so the flush
+				// is ours to do - the log sink does the same for its own writes.
+				fb_console_putc(fbd, key);
+				echoed = true;
+			}
+		}
+		if (echoed) {
+			fb_present(fbd);
+		}
+		// Nothing to do: sleep until an interrupt.  With the keyboard line routed
+		// that is IRQ1; until there is a periodic tick this is also the only
+		// thing that can wake us, which is why stage C (the LAPIC timer) makes
+		// the polled fallback in kbd_getchar() live as well.
 		__asm__ volatile("hlt");
 	}
 }

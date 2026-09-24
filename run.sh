@@ -35,7 +35,6 @@ if [ -z "$1" ]; then
 		-display gtk \
 		-drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
 		-drive format=raw,file=build/esp.img,index=0,media=disk \
-		-device usb-kbd \
 		-usb \
 		-serial stdio
 else
@@ -49,7 +48,6 @@ else
 		-drive if=pflash,format=raw,readonly=on,file="$OVMF_CODE" \
 		-drive if=pflash,format=raw,file="$LOCAL_VARS" \
 		-drive format=raw,file=build/esp.img,index=0,media=disk \
-		-device usb-kbd \
 		-usb \
 		-serial stdio \
 		-s -S

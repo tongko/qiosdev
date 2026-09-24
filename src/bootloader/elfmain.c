@@ -69,6 +69,58 @@ static void tsc_init(bootinfo_t *bi) {
 	bi->tsc_start = 0; // We start from kernel, not here
 }
 
+/*
+ * ACPI: the RSDP is only reachable through the configuration table, and the EFI
+ * System Table disappears with boot services, so its physical address has to be
+ * remembered before ExitBootServices.
+ */
+typedef struct __attribute__((packed)) {
+	char signature[8]; // "RSD PTR " - not NUL terminated
+	UINT8 checksum;		 // over the first 20 bytes
+	char oem_id[6];
+	UINT8 revision;
+	UINT32 rsdt_address;
+	UINT32 length;
+	UINT64 xsdt_address;
+	UINT8 extended_checksum; // over length bytes
+	UINT8 reserved[3];
+} acpi_rsdp_t;
+
+static bool guid_eq(const EFI_GUID *a, const EFI_GUID *b) {
+	const UINT8 *x = (const UINT8 *)a;
+	const UINT8 *y = (const UINT8 *)b;
+
+	for (UINTN i = 0; i < sizeof(EFI_GUID); i++) {
+		if (x[i] != y[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool bytes_eq(const void *a, const void *b, UINTN length) {
+	const UINT8 *x = a;
+	const UINT8 *y = b;
+
+	for (UINTN i = 0; i < length; i++) {
+		if (x[i] != y[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+// ACPI tables are valid when their bytes sum to zero (mod 256).
+static bool sum_is_zero(const void *data, UINTN length) {
+	const UINT8 *bytes = data;
+	UINT8 sum = 0;
+
+	for (UINTN i = 0; i < length; i++) {
+		sum += bytes[i];
+	}
+	return sum == 0;
+}
+
 EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	// What this boot loader does:
 	// 1. Setup simple paging, but not switching to it yet.
@@ -244,6 +296,42 @@ EFI_STATUS efi_main(EFI_HANDLE ih, EFI_SYSTEM_TABLE *st) {
 	EFI_PHYSICAL_ADDRESS stack_pa = alloc_pages(AllocateAnyPages, EfiLoaderData, STACK_PAGE_SIZE);
 	Print(u"[efi_main] Stack physical address: 0x%lx\r\n", stack_pa);
 	bi.kstack_base = stack_pa;
+
+	{
+		EFI_GUID acpi20_guid = ACPI_20_TABLE_GUID;
+		EFI_GUID acpi10_guid = ACPI_TABLE_GUID;
+		EFI_CONFIGURATION_TABLE *found = NULL;
+
+		// ACPI 2.0+ first: that is the entry whose RSDP carries an XSDT, and
+		// with 4 GiB or more of RAM the RSDT's 32-bit pointers can truncate.
+		for (UINTN i = 0; i < st->NumberOfTableEntries && found == NULL; i++) {
+			if (guid_eq(&st->ConfigurationTable[i].VendorGuid, &acpi20_guid)) {
+				found = &st->ConfigurationTable[i];
+			}
+		}
+		for (UINTN i = 0; i < st->NumberOfTableEntries && found == NULL; i++) {
+			if (guid_eq(&st->ConfigurationTable[i].VendorGuid, &acpi10_guid)) {
+				found = &st->ConfigurationTable[i];
+			}
+		}
+
+		if (found == NULL || found->VendorTable == NULL) {
+			Print(u"%E\u26a0\ufe0f [efi_main] Firmware offered no ACPI tables%N\r\n");
+		} else {
+			acpi_rsdp_t *rsdp = (acpi_rsdp_t *)(UINTN)found->VendorTable;
+			UINTN len = (rsdp->revision >= 2 && rsdp->length >= 36) ? (UINTN)rsdp->length : 20;
+
+			if (bytes_eq(rsdp->signature, "RSD PTR ", 8) && sum_is_zero(rsdp, len)) {
+				bi.acpi_rsdp_pa = (EFI_PHYSICAL_ADDRESS)(UINTN)found->VendorTable;
+				Print(u"[efi_main] ACPI RSDP at 0x%lx (rev %u, %s)\r\n",
+							(UINTN)bi.acpi_rsdp_pa,
+							(UINT32)rsdp->revision,
+							rsdp->revision >= 2 ? u"XSDT" : u"RSDT");
+			} else {
+				Print(u"%E\u274c [efi_main] RSDP signature or checksum is bad, ignoring%N\r\n");
+			}
+		}
+	}
 
 #if defined(EFI_DEBUG) && defined(EFI_DEBUG_PAGING)
 	Print(u"[DEBUG] FB paddr: 0x%lx\r\n", bi.frame_buff.base_addr);
