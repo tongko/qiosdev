@@ -19,10 +19,9 @@ void kbd_init(void);
 bool kbd_getchar(char *out);
 
 /*
- * Read the controller's output buffer if it has a byte waiting, queue it, and
- * return whether anything was read.  kbd_getchar() calls this itself, so the
- * keyboard works whether or not the interrupt line is wired up - which also
- * makes it a one-line test of where a missing key is getting lost.
+ * Read the controller's output buffer once and queue the byte.  kbd_getchar()
+ * no longer calls this - input is interrupt driven - but it stays available as
+ * a diagnostic when a controller is not raising IRQ1.
  */
 bool kbd_poll_raw(void);
 

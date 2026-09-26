@@ -1,20 +1,5 @@
-#include <kernel/gdt.h>
-#include <kernel/global.h>
-#include <kernel/idt.h>
 #include <kernel/kmain.h>
-#include <kernel/klog.h>
-#include <kernel/mm.h>
-#include <kernel/serial.h>
-#include <kernel/tsc.h>
-#include <kernel/acpi.h>
-#include <kernel/apic.h>
-#include <kernel/devices/device.h>
-#include <kernel/devices/kbd.h>
-#include <kernel/devices/fb.h>
-#include <kernel/bmp.h>
-#include <libk/string.h>
 #include <stdbool.h>
-#include <kernel/io.h>
 
 void kmain(bootinfo_t *bi) {
 	// stop interrup
@@ -82,16 +67,15 @@ void kmain(bootinfo_t *bi) {
 	apic_init();
 	kbd_init();
 
-	// A tick proves the LAPIC -> IDT -> dispatcher path end to end, and it is
-	// what lets the idle loop wake up (and therefore poll the keyboard).
-	apic_timer_start(100);
+	// A periodic tick, independent of the keyboard: it proves the LAPIC -> IDT
+	// -> dispatcher path end to end and gives the idle loop a time base.
+	// apic_timer_start(100);
 
 	{
 		uint64_t flags;
 
 		__asm__ volatile("pushfq; popq %0" : "=r"(flags));
-		printk("qios: entering idle, interrupts %s",
-					 (flags & (1ull << 9)) ? "enabled (IF=1)" : "DISABLED (IF=0)");
+		printk("qios: entering idle, interrupts %s", (flags & (1ull << 9)) ? "enabled (IF=1)" : "DISABLED (IF=0)");
 	}
 
 	uint64_t ticks_seen = 0;
@@ -101,8 +85,7 @@ void kmain(bootinfo_t *bi) {
 
 		if (ticks_seen == 0 && apic_timer_ticks() > 0) {
 			ticks_seen = apic_timer_ticks();
-			printk("qios: first timer tick after %llu, interrupts are being delivered",
-						 (unsigned long long)ticks_seen);
+			printk("qios: first timer tick after %llu, interrupts are being delivered", (unsigned long long)ticks_seen);
 		}
 
 		// Rendering happens here, not in the ISR: the keyboard queue is the
@@ -120,10 +103,9 @@ void kmain(bootinfo_t *bi) {
 		if (echoed) {
 			fb_present(fbd);
 		}
-		// Nothing to do: sleep until an interrupt.  With the keyboard line routed
-		// that is IRQ1; until there is a periodic tick this is also the only
-		// thing that can wake us, which is why stage C (the LAPIC timer) makes
-		// the polled fallback in kbd_getchar() live as well.
+		// Sleep until an interrupt.  IRQ1 wakes us the moment a key is pressed,
+		// so input no longer depends on the periodic tick (which only serves as
+		// a general time base here).
 		__asm__ volatile("hlt");
 	}
 }

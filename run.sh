@@ -6,11 +6,16 @@ if [ -f "/usr/share/edk2/x64/OVMF_VARS.4m.fd" ]; then
 	OVMF_CODE="/usr/share/edk2/x64/OVMF_CODE.4m.fd"
 	OVMF_VARS_TEMPLATE="/usr/share/edk2/x64/OVMF_VARS.4m.fd"
 	echo "➡ Detected Architecture: Omarchy / Arch Linux"
-elif [ -f "/usr/share/OVMF/OVMF_CODE_4M.fd"]; then
+elif [ -f "/usr/share/OVMF/OVMF_CODE_4M.fd" ]; then
 	# Path config for Ubuntu / Debian
 	OVMF_CODE="/usr/share/OVMF/OVMF_CODE_4M.fd"
 	OVMF_VARS_TEMPLATE="/usr/share/OVMF/OVMF_VARS_4M.fd"
 	echo "➡ Detected Architecture: Ubuntu / Debian"
+elif [ -f "/usr/share/edk2/ovmf/OVMF_VARS.fd" ]; then
+	# Path configuration for Fedora
+	OVMF_CODE="/usr/share/edk2/ovmf/OVMF_CODE.fd"
+	OVMF_VARS_TEMPLATE="/usr/share/edk2/ovmf/OVMF_VARS.fd"
+	echo "➡ Detected Architecture: Fedora"
 else
 	echo "❌ Error: UEFI OVMF firmware package not found on this machine."
 	echo "Please run: 'omarchy pkg add edk2-ovmf' or 'sudo apt install ovmf'"

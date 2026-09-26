@@ -1,9 +1,11 @@
-// kbd.c - PS/2 keyboard: queue in the ISR, decode in the poll.
+// kbd.c - PS/2 keyboard, interrupt driven.
 //
-// The 8042 is left in whatever state the firmware put it in, so the config byte
-// is read back, the port clock and IRQ1 are enabled, and translation to
-// scancode set 1 is requested.  Every wait is bounded: a machine without a PS/2
-// controller must not hang the boot.
+// The IRQ1 handler reads one scancode out of the 8042 and queues it;
+// kbd_getchar() decodes the queue in normal context, where rendering is safe.
+// The controller config byte's bit 0 is the first port's interrupt enable and
+// bit 4 disables its clock, so both matter: clearing bit 0 (rather than
+// setting it) is a keyboard that produces scancodes but never raises IRQ1.
+// Every wait is bounded: a machine without a PS/2 controller must not hang.
 #include <kernel/acpi.h>
 #include <kernel/apic.h>
 #include <kernel/devices/kbd.h>
@@ -53,9 +55,6 @@ static bool kbd_extended;
 static bool kbd_live;
 static uint32_t kbd_irqs;
 static bool kbd_reported;
-static bool kbd_switched;
-static uint32_t kbd_isr_reports;
-static uint32_t kbd_raw_seen;
 
 static bool kbd_wait_input_clear(void) {
 	for (uint32_t i = 0; i < 100000; i++) {
@@ -118,13 +117,8 @@ static void kbd_isr(void *ctx, interrupt_frame_t *frame) {
 	(void)ctx;
 	(void)frame;
 
-	if (kbd_isr_reports < 6) { // TEMPORARY: does IRQ1 reach the handler at all?
-		kbd_isr_reports++;
-		printk("kbd: ISR entry, status=0x%02x", (unsigned)inb(KBD_STATUS_PORT));
-	}
-
-	// The poll may have drained the buffer already; reading anyway returns the
-	// last byte again, which would duplicate a key.
+	// Read only when the output buffer actually holds a byte; a spurious entry
+	// would otherwise read the previous scancode again and duplicate a key.
 	if ((inb(KBD_STATUS_PORT) & KBD_STATUS_OUT_FULL) == 0) {
 		return;
 	}
@@ -139,16 +133,6 @@ bool kbd_poll_raw(void) {
 
 	if ((inb(KBD_STATUS_PORT) & KBD_STATUS_OUT_FULL) == 0) {
 		return false;
-	}
-
-	if (kbd_raw_seen < 2) { // TEMPORARY: line state *while a byte is pending*
-		kbd_raw_seen++;
-		outb(0x20, 0x0A);
-		uint8_t irr = inb(0x20);
-		outb(0x20, 0x0B);
-		uint8_t isr = inb(0x20);
-		printk("kbd: byte pending, 8259 irr=0x%02x isr=0x%02x imr=0x%02x",
-					 (unsigned)irr, (unsigned)isr, (unsigned)inb(0x21));
 	}
 
 	scancode = inb(KBD_DATA_PORT);
@@ -222,18 +206,9 @@ bool kbd_getchar(char *out) {
 	uint8_t scancode;
 
 	/*
-	 * Once the interrupt has proved it works, it becomes the only producer and
-	 * the poll is switched off; until then the poll carries the keyboard, which
-	 * is what keeps it usable on a machine where the line reaches nobody.  The
-	 * switch is one way, so a working interrupt stays in charge.
+	 * The IRQ1 handler is the only producer; this side only drains its queue.
+	 * Reading the controller directly here would race the handler for the byte.
 	 */
-	if (kbd_irqs == 0) {
-		kbd_poll_raw();
-	} else if (!kbd_switched) {
-		kbd_switched = true;
-		printk("kbd: the interrupt path works, polling is now off");
-	}
-
 	oldest = ringbuf_oldest(&kbd_ring);
 
 	if (kbd_read_pos < oldest) {
@@ -248,7 +223,7 @@ bool kbd_getchar(char *out) {
 		if (c != 0) {
 			if (!kbd_reported) {
 				kbd_reported = true;
-				printk("kbd: first key arrived via %s", kbd_irqs > 0 ? "the interrupt" : "polling");
+				printk("kbd: first key arrived on IRQ%u", (unsigned)KBD_IRQ);
 			}
 			*out = c;
 			return true;
@@ -278,7 +253,6 @@ void kbd_init(void) {
 	kbd_live = false;
 	kbd_irqs = 0;
 	kbd_reported = false;
-	kbd_switched = false;
 
 	if (!kbd_write_cmd(0xAE)) { // enable the first PS/2 port
 		printk("kbd: no PS/2 controller answered, keyboard disabled");
@@ -292,9 +266,9 @@ void kbd_init(void) {
 
 	uint8_t before = config;
 
-	config &= (uint8_t)~0x01u; // port clock on
-	config &= (uint8_t)~0x10u; // IRQ1 on
-	config |= 0x40u;				// request scancode translation (set 1)
+	config |= 0x01u;				// bit 0: enable the first port's interrupt (IRQ1)
+	config &= (uint8_t)~0x10u; // bit 4: clear "disable keyboard" so the port runs
+	config |= 0x40u;				// bit 6: request scancode translation (set 1)
 
 	if (!kbd_write_cmd(0x60) || !kbd_write_data(config)) {
 		printk("kbd: cannot write the controller config byte, keyboard disabled");
@@ -310,7 +284,7 @@ void kbd_init(void) {
 		printk("kbd: controller config 0x%02x -> 0x%02x (irq1 %s, translation %s)",
 				 (unsigned)before,
 				 (unsigned)verify,
-				 (verify & 0x10) ? "DISABLED" : "enabled",
+				 (verify & 0x01) ? "enabled" : "DISABLED",
 				 (verify & 0x40) ? "to set 1" : "raw set 2");
 	}
 
@@ -348,12 +322,13 @@ void kbd_init(void) {
 	}
 
 	/*
-	 * IRQ1 also goes through the 8259, which is how a legacy ISA line reaches
-	 * the CPU on machines where the I/O APIC does not own it: the PIC's INT is
-	 * delivered as an ExtINT through LAPIC LINT0, which apic_init() leaves
-	 * unmasked for exactly this reason.
+	 * Exactly one controller owns the line.  With an I/O APIC the redirection
+	 * entry above is the path; the 8259 is only unmasked when there is no I/O
+	 * APIC, where the PIC's INT reaches the CPU as an ExtINT through LINT0.
 	 */
-	pic_set_mask(KBD_IRQ, false);
+	if (!apic_ready()) {
+		pic_set_mask(KBD_IRQ, false);
+	}
 	kbd_live = true;
 	printk("kbd: PS/2 keyboard ready on vector %u", (unsigned)KBD_VECTOR);
 }
